@@ -1,0 +1,4 @@
+package iquery
+
+modules = IQuery, IQuery.Event, IQuery.Interval, IQuery.Timeout, IQuery.Elements
+
