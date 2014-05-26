@@ -24,10 +24,10 @@ onEvent : EventType -> Element -> (Event -> IO Int) -> IO ()
 onEvent ty (MkElem e) cb =
   let ev = show ty in
       mkForeign (
-        FFun "%0[%1]=%2" [ FPtr
-                         , FString
-                         , FFunction (FAny Event) (FAny (IO Int))
-                         ] FUnit
+        FFun "%0.addEventListener(%1, %2)" [ FPtr
+                                           , FString
+                                           , FFunction (FAny Event) (FAny (IO Int))
+                                           ] FUnit
       ) e ev cb
 
 onClick : Element -> (Event -> IO Int) -> IO ()
