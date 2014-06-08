@@ -14,9 +14,7 @@ data NodeList : Type where
 
 newElement : String -> IO Element
 newElement t =
-  [| MkElem (
-      mkForeign (FFun "document.createElement(%0)" [FString] FPtr) t
-     ) |] 
+  map MkElem $ mkForeign (FFun "document.createElement(%0)" [FString] FPtr) t
 
 setProperty : Element -> String -> String -> IO ()
 setProperty (MkElem e) name value =
@@ -96,27 +94,22 @@ onClick : Element -> (Event -> IO Int) -> IO ()
 onClick = onEvent Click
 
 length : NodeList -> IO Int
-length (MkNodeList l) = do
-  len <- mkForeign (FFun "%0.length" [FPtr] FInt) l
-  return len
+length (MkNodeList l) =
+  mkForeign (FFun "%0.length" [FPtr] FInt) l
 
 elemAt : NodeList -> Int -> IO (Maybe Element)
-elemAt (MkNodeList l) i = do
-  len <- length (MkNodeList l)
-  if len > i
-     then do
-       e <- mkForeign (FFun "%0.item(%1)" [FPtr, FInt] FPtr) l i
-       return $ Just (MkElem e)
-     else return Nothing
+elemAt (MkNodeList l) i =
+  if !(length $ MkNodeList l) > i then
+    map (Just . MkElem) $ mkForeign (FFun "%0.item(%1)" [FPtr, FInt] FPtr) l i
+  else
+    return Nothing
 
 query : String -> IO NodeList
-query q = do
-  e <- mkForeign (FFun "document.querySelectorAll(%0)" [FString] FPtr) q
-  return (MkNodeList e)
+query q =
+  map MkNodeList $ mkForeign (FFun "document.querySelectorAll(%0)" [FString] FPtr) q
 
 childNodes : Element -> IO NodeList
-childNodes (MkElem e) = do
-  nl <- mkForeign (FFun "%0.childNodes" [FPtr] FPtr) e
-  return (MkNodeList e)
+childNodes (MkElem e) =
+  map MkNodeList $ mkForeign (FFun "%0.childNodes" [FPtr] FPtr) e
 
 
