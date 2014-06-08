@@ -65,16 +65,16 @@ evProp {fty} propName (MkEvent e) = mkForeign (
 
 private
 boolProp : String -> Event -> IO Bool
-boolProp propName e = [| toBool (evProp {fty = FInt} propName e) |]
+boolProp propName e = map toBool $ evProp {fty = FInt} propName e)
   where toBool : Int -> Bool
         toBool 1 = True
         toBool _ = False
 
 key : Event -> IO (Maybe Key)
-key e = [| fromKeyCode (evProp {fty = FInt} "keyCode" e) |]
+key e = map fromKeyCode $ evProp {fty = FInt} "keyCode" e
 
 mouseButton : Event -> IO (Maybe MouseButton)
-mouseButton e = [| fromButtonCode (evProp {fty = FInt} "button" e) |]
+mouseButton e = map fromButtonCode $ evProp {fty = FInt} "button" e
 
 clientX : Event -> IO Int
 clientX = evProp {fty = FInt} "clientX"
