@@ -65,7 +65,7 @@ evProp {fty} propName (MkEvent e) = mkForeign (
 
 private
 boolProp : String -> Event -> IO Bool
-boolProp propName e = map toBool $ evProp {fty = FInt} propName e)
+boolProp propName e = map toBool $ evProp {fty = FInt} propName e
   where toBool : Int -> Bool
         toBool 1 = True
         toBool _ = False
