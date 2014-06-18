@@ -4,6 +4,7 @@ import IQuery.Timeout
 import IQuery.Interval
 import IQuery.Event
 import IQuery.Elements
+import IQuery.State
 
 %access public
 
