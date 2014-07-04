@@ -21,6 +21,12 @@ shift s e = do
   get s :=> toState xs
   pure 1
 
+setV : Event -> IO Int
+setV e = do
+     Just el <- !(query "input#val") `elemAt` 0
+     setValue el "wohoo"
+     pure 1
+     
 main : IO ()
 main = do
   queue <- newState (STList STString) Nil
@@ -28,4 +34,6 @@ main = do
   onClick p (push queue) 
   Just s <- !(query "input#shiftAct") `elemAt` 0
   onClick s (shift queue) 
+  Just sv <- !(query "input#setVal") `elemAt` 0
+  onClick sv setV 
   pure ()
