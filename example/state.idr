@@ -1,6 +1,6 @@
 module Main
 
-import iQuery
+import IQuery
 
 push : StateC (STList STString) -> Event -> IO Int
 push s e = do
