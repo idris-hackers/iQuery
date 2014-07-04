@@ -16,6 +16,11 @@ newElement : String -> IO Element
 newElement t =
   map MkElem $ mkForeign (FFun "document.createElement(%0)" [FString] FPtr) t
 
+newElementNS : String -> String -> IO Element
+newElementNS ns t =
+  map MkElem $ mkForeign 
+    (FFun "document.createElementNS(%0, %1)" [FString, FString] FPtr) ns t
+
 setProperty : Element -> String -> String -> IO ()
 setProperty (MkElem e) name value =
   mkForeign (
@@ -44,6 +49,16 @@ setAttribute (MkElem e) name value =
                                   , FString
                                   ] FUnit
   ) e name value
+
+setAttributeNS : Element -> String -> String -> String -> IO ()
+setAttributeNS (MkElem e) ns name value =
+  mkForeign (
+    FFun "%0.setAttributeNS(%1,%2,%3)" [ FPtr
+                                       , FString
+                                       , FString
+                                       , FString
+                                       ] FUnit
+  ) e ns name value
 
 getAttribute : Element -> String -> IO String
 getAttribute (MkElem e) name = 
