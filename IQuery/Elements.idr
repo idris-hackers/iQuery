@@ -38,6 +38,9 @@ getProperty (MkElem e) name =
                   ] FString
   ) e name
 
+setValue : Element -> String -> IO ()
+setValue = flip setProperty "value"
+
 getValue : Element -> IO String
 getValue = flip getProperty "value"
 
