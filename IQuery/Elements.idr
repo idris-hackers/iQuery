@@ -1,12 +1,17 @@
-module Elements
+module Element
 
-import IQuery.Event
+import Effects
+import Effect.StdIO
 
 %access public
 
 abstract
 data Element : Type where
   MkElem : Ptr -> Element
+
+-- scope hack
+mkElem : Ptr -> Element
+mkElem = MkElem
 
 abstract
 data NodeList : Type where
@@ -21,6 +26,7 @@ newElementNS ns t =
   map MkElem $ mkForeign 
     (FFun "document.createElementNS(%0, %1)" [FString, FString] FPtr) ns t
 
+private
 setProperty : Element -> String -> String -> IO ()
 setProperty (MkElem e) name value =
   mkForeign (
@@ -30,6 +36,7 @@ setProperty (MkElem e) name value =
                      ] FUnit
   ) e name value
 
+private
 getProperty : Element -> String -> IO String
 getProperty (MkElem e) name = 
   mkForeign (
@@ -37,12 +44,6 @@ getProperty (MkElem e) name =
                   , FString
                   ] FString
   ) e name
-
-setValue : Element -> String -> IO ()
-setValue = flip setProperty "value"
-
-getValue : Element -> IO String
-getValue = flip getProperty "value"
 
 setAttribute : Element -> String -> String -> IO ()
 setAttribute (MkElem e) name value =
@@ -98,19 +99,6 @@ setText : Element -> String -> IO ()
 setText (MkElem e) s =
   mkForeign (FFun "%0.textContent=%1" [FPtr, FString] FUnit) e s
 
-onEvent : EventType -> Element -> (Event -> IO Int) -> IO ()
-onEvent ty (MkElem e) cb =
-  let ev = show ty in
-      mkForeign (
-        FFun "%0.addEventListener(%1, %2)" [ FPtr
-                                           , FString
-                                           , FFunction (FAny Event) (FAny (IO Int))
-                                           ] FUnit
-      ) e ev cb
-
-onClick : Element -> (Event -> IO Int) -> IO ()
-onClick = onEvent Click
-
 length : NodeList -> IO Int
 length (MkNodeList l) =
   mkForeign (FFun "%0.length" [FPtr] FInt) l
@@ -130,4 +118,32 @@ childNodes : Element -> IO NodeList
 childNodes (MkElem e) =
   map MkNodeList $ mkForeign (FFun "%0.childNodes" [FPtr] FPtr) e
 
+data EffDom : Effect where
+  GetValue : Element -> { () } EffDom String
+  SetValue : Element -> String -> { () } EffDom ()
+ 
+using (m : Type -> Type)
+  instance Handler EffDom IO where
+    handle () (GetValue el) k = do
+      k !(getProperty el "value") ()
+    handle () (SetValue el nv) k = do
+      setProperty el "value" nv
+      k () ()
+     
+DOM : EFFECT
+DOM = MkEff () EffDom
 
+getValue : Element -> { [DOM] } Eff m String
+getValue el = call $ GetValue el
+
+setValue : Element -> String -> { [DOM] } Eff m ()
+setValue el v = call $ SetValue el v
+
+onEvent : String -> Element -> (e -> IO Int) -> IO ()
+onEvent {e} ev (MkElem el) cb =
+    mkForeign (
+      FFun "%0.addEventListener(%1, %2)" [ FPtr
+                                         , FString
+                                         , FFunction (FAny e) (FAny (IO Int))
+                                         ] FUnit
+    ) el ev cb

@@ -1,13 +1,16 @@
 module Event
 
+import Effects
+import Effect.StdIO
 import IQuery.Key
+import IQuery.Element
 
 %access public
 
 abstract
 data Event : Type where
   MkEvent : Ptr -> Event
-
+  
 public
 data EventType : Type where
   Click : EventType
@@ -76,11 +79,11 @@ key e = map fromKeyCode $ evProp {fty = FInt} "keyCode" e
 mouseButton : Event -> IO (Maybe MouseButton)
 mouseButton e = map fromButtonCode $ evProp {fty = FInt} "button" e
 
-clientX : Event -> IO Int
-clientX = evProp {fty = FInt} "clientX"
+-- clientX : IsMouseEvent e => e -> IO Int
+-- clientX = evProp {fty = FInt} "clientX"
 
-clientY : Event -> IO Int
-clientY = evProp {fty = FInt} "clientY"
+-- clientY : IsMouseEvent e => e -> IO Int
+-- clientY = evProp {fty = FInt} "clientY"
 
 altKey : Event -> IO Bool
 altKey = boolProp "altKey"
@@ -93,3 +96,36 @@ metaKey = boolProp "metaKey"
 
 shiftKey : Event -> IO Bool
 shiftKey = boolProp "shiftKey"
+ 
+data EffEvent : Effect where
+  Target : { Event } EffEvent Element
+ 
+using (m : Type -> Type)
+  instance Handler EffEvent IO where
+    handle e Target k = do 
+      x <- map mkElem $ evProp {fty = FPtr} "target" e
+      k x e
+        
+EVENT : EFFECT
+EVENT = MkEff Event EffEvent
+
+target : { [EVENT] } Eff m Element
+target = call $ Target
+ 
+data MouseEvent : Effect where
+  ClientX : { Event } MouseEvent Int
+     
+MOUSEEVENT : EFFECT
+MOUSEEVENT = MkEff Event MouseEvent
+
+using (m : Type -> Type)
+  instance Handler MouseEvent IO where
+    handle e ClientX k = do
+      x <- evProp {fty = FInt} "clientX" e
+      k x e
+
+clientX : { [MOUSEEVENT] } Eff m Int
+clientX = call $ ClientX
+
+onClick : Element -> ({ [STDIO, DOM, EVENT, MOUSEEVENT] } Eff IO Int) -> IO ()
+onClick el cb = onEvent "click" el (\e => runInit [(), (), e, e] cb) 
