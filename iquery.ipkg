@@ -2,5 +2,14 @@ package iquery
 
 opts = "-p effects"
 
-modules = IQuery, IQuery.Ajax, IQuery.Elements, IQuery.Event, IQuery.Interval, IQuery.Key, IQuery.State, IQuery.Timeout
+modules = IQuery
+	, IQuery.Ajax
+	, IQuery.Elements
+	, IQuery.Input
+	, IQuery.Event
+	, IQuery.Document
+	, IQuery.Interval
+	, IQuery.Key
+	, IQuery.State
+	, IQuery.Timeout
 

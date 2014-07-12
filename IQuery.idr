@@ -2,8 +2,9 @@ module IQuery
 
 import IQuery.Timeout
 import IQuery.Interval
-import IQuery.Element
+import IQuery.Elements
 import IQuery.Event
+import IQuery.Document
 import IQuery.State
 
 %access public

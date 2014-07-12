@@ -3,13 +3,14 @@ module Event
 import Effects
 import Effect.StdIO
 import IQuery.Key
-import IQuery.Element
+import IQuery.Elements
+import IQuery.Input
 
 %access public
 
 abstract
-data Event : Type where
-  MkEvent : Ptr -> Event
+data Event : ETy -> Type where
+  MkEvent : Ptr -> Event et
   
 public
 data EventType : Type where
@@ -60,23 +61,22 @@ instance Show EventType where
   show Select = "select"
   show Submit = "submit"
 
-private
-evProp : {fty : FTy} -> String -> Event -> IO (interpFTy fty)
+evProp : {fty : FTy} -> String -> Event et -> IO (interpFTy fty)
 evProp {fty} propName (MkEvent e) = mkForeign (
                                       FFun "%0[%1]" [ FPtr, FString ] fty
                                     ) e propName
 
 private
-boolProp : String -> Event -> IO Bool
+boolProp : String -> Event et -> IO Bool
 boolProp propName e = map toBool $ evProp {fty = FInt} propName e
   where toBool : Int -> Bool
         toBool 1 = True
         toBool _ = False
 
-key : Event -> IO (Maybe Key)
+key : Event et -> IO (Maybe Key)
 key e = map fromKeyCode $ evProp {fty = FInt} "keyCode" e
 
-mouseButton : Event -> IO (Maybe MouseButton)
+mouseButton : Event et -> IO (Maybe MouseButton)
 mouseButton e = map fromButtonCode $ evProp {fty = FInt} "button" e
 
 -- clientX : IsMouseEvent e => e -> IO Int
@@ -85,47 +85,44 @@ mouseButton e = map fromButtonCode $ evProp {fty = FInt} "button" e
 -- clientY : IsMouseEvent e => e -> IO Int
 -- clientY = evProp {fty = FInt} "clientY"
 
-altKey : Event -> IO Bool
-altKey = boolProp "altKey"
+-- altKey : Event -> IO Bool
+-- altKey = boolProp "altKey"
 
-ctrlKey : Event -> IO Bool
-ctrlKey = boolProp "ctrlKey"
+-- ctrlKey : Event -> IO Bool
+-- ctrlKey = boolProp "ctrlKey"
 
-metaKey : Event -> IO Bool
-metaKey = boolProp "metaKey"
+-- metaKey : Event -> IO Bool
+-- metaKey = boolProp "metaKey"
 
-shiftKey : Event -> IO Bool
-shiftKey = boolProp "shiftKey"
- 
+-- shiftKey : Event -> IO Bool
+-- shiftKey = boolProp "shiftKey"
+
 data EffEvent : Effect where
-  Target : { Event } EffEvent Element
- 
+  Target : (et : ETy) -> { Event et } EffEvent (Element et)
+
 using (m : Type -> Type)
   instance Handler EffEvent IO where
-    handle e Target k = do 
-      x <- map mkElem $ evProp {fty = FPtr} "target" e
+    handle e (Target et) k = do 
+      x <- map (mkElem et) $ evProp {fty = FPtr} "target" e
       k x e
         
-EVENT : EFFECT
-EVENT = MkEff Event EffEvent
+EVENT : ETy -> EFFECT
+EVENT et = MkEff (Event et) EffEvent
 
-target : { [EVENT] } Eff m Element
-target = call $ Target
+target : {et : ETy} -> { [EVENT et] } Eff m (Element et)
+target {et} = call $ Target et
  
-data MouseEvent : Effect where
-  ClientX : { Event } MouseEvent Int
+-- data MouseEvent : Effect where
+--   ClientX : { Event et } MouseEvent Int
      
-MOUSEEVENT : EFFECT
-MOUSEEVENT = MkEff Event MouseEvent
+-- MOUSEEVENT : EFFECT
+-- MOUSEEVENT = MkEff Event MouseEvent
 
-using (m : Type -> Type)
-  instance Handler MouseEvent IO where
-    handle e ClientX k = do
-      x <- evProp {fty = FInt} "clientX" e
-      k x e
+-- using (m : Type -> Type)
+--   instance Handler MouseEvent IO where
+--     handle e ClientX k = do
+--       x <- evProp {fty = FInt} "clientX" e
+--       k x e
 
-clientX : { [MOUSEEVENT] } Eff m Int
-clientX = call $ ClientX
-
-onClick : Element -> ({ [STDIO, DOM, EVENT, MOUSEEVENT] } Eff IO Int) -> IO ()
-onClick el cb = onEvent "click" el (\e => runInit [(), (), e, e] cb) 
+-- clientX : { [MOUSEEVENT] } Eff m Int
+-- clientX = call $ ClientX
