@@ -7,6 +7,7 @@ modules = IQuery
 	, IQuery.Elements
 	, IQuery.Input
 	, IQuery.Event
+	, IQuery.MouseEvent
 	, IQuery.Document
 	, IQuery.Interval
 	, IQuery.Key

@@ -6,4 +6,3 @@ import IQuery.Event
 import IQuery.Input
 
 %access public
-

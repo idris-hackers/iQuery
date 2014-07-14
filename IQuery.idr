@@ -4,6 +4,7 @@ import IQuery.Timeout
 import IQuery.Interval
 import IQuery.Elements
 import IQuery.Event
+import IQuery.MouseEvent
 import IQuery.Document
 import IQuery.State
 

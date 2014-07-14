@@ -36,9 +36,6 @@ data EventType : Type where
   Select : EventType
   Submit : EventType
 
-MouseEvents : List EventType
-MouseEvents = [Click, DoubleClick, MouseDown, MouseMove, MouseOver, MouseOut, MouseUp]
-
 instance Show EventType where
   show Click = "click"
   show DoubleClick = "dblclick"
@@ -113,19 +110,3 @@ EVENT t et = MkEff (Event t et) EffEvent
 
 target : {et : ETy} -> { [EVENT t et] } Eff m (Element et)
 target {et} = call $ Target et
-
-clientX : { default tactics { search 30 } correctEvent : Elem t MouseEvents }
-  -> { [EVENT t et] } Eff m Int
-clientX = call $ EventProperty FInt "clientX"
-
--- mouseButton : Event et -> IO (Maybe MouseButton)
--- mouseButton e = map fromButtonCode $ evProp {fty = FInt} "button" e
-
--- clientX : IsMouseEvent e => e -> IO Int
--- clientX = evProp {fty = FInt} "clientX"
-
--- clientY : IsMouseEvent e => e -> IO Int
--- clientY = evProp {fty = FInt} "clientY"
-
-onClick : Element et -> ({ [DOM, EVENT Click et] } Eff IO Int) -> IO ()
-onClick el cb = onEvent "click" el (\e => runInit [(), e] cb) 

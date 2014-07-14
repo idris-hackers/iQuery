@@ -11,6 +11,7 @@ data ETy : Type where
   Input : ETy
   Text : ETy
   Date : ETy
+  Button : ETy
   
 abstract
 data Element : ETy -> Type where
