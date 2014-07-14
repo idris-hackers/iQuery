@@ -18,6 +18,14 @@ clientY : { default tactics { search 30 } correctEvent : Elem t MouseEvents }
        -> { [EVENT t et] } Eff m Int
 clientY = call $ EventProperty FInt "clientY"
 
+screenX : { default tactics { search 30 } correctEvent : Elem t MouseEvents }
+       -> { [EVENT t et] } Eff m Int
+screenX = call $ EventProperty FInt "screenX"
+
+screenY : { default tactics { search 30 } correctEvent : Elem t MouseEvents }
+       -> { [EVENT t et] } Eff m Int
+screenY = call $ EventProperty FInt "screenY"
+
 mouseButton : { default tactics { search 30 } correctEvent : Elem t MouseEvents }
            -> { [EVENT t et] } Eff m (Maybe MouseButton)
 mouseButton = do
