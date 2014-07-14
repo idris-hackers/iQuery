@@ -89,9 +89,9 @@ namespace Priv
 -- tagName : Element -> IO String
 -- tagName (MkElem e) = mkForeign (FFun "%0.tagName" [FPtr] FString) e
 
--- getText : Element -> IO String
--- getText (MkElem e) =
---   mkForeign (FFun "%0.textContent" [FPtr] FString) e
+  getText : Element et -> IO String
+  getText (MkElem e) =
+    mkForeign (FFun "%0.textContent" [FPtr] FString) e
 
   setText : Element et -> String -> IO ()
   setText (MkElem e) s =
@@ -131,11 +131,12 @@ interpNN "input" = Input
 interpNN _ = Unspecified
 
 data EffDom : Effect where
-  GetProperty  : String -> Element et -> { () } EffDom String
-  SetProperty  : String -> Element et -> String -> { () } EffDom ()
+  GetProperty : String -> Element et -> { () } EffDom String
+  SetProperty : String -> Element et -> String -> { () } EffDom ()
+  SetText     : Element et -> String -> { () } EffDom ()
+  GetText     : Element et -> { () } EffDom String
   NewElement  : (nn : String) -> { () } EffDom (Element (interpNN nn))
   AppendChild : (Element a) -> (Element b) -> { () } EffDom ()
-  SetText     : Element et -> String -> { () } EffDom ()
   
 private
 createElement : (nn : String) -> IO (Element (interpNN nn))
@@ -158,6 +159,8 @@ instance Handler EffDom IO where
   handle () (AppendChild a b) k = do
     Priv.appendChild a b
     k () ()
+  handle () (GetText e) k = do
+    k !(Priv.getText e) ()
   handle () (SetText e s) k = do
     Priv.setText e s
     k () ()
@@ -171,11 +174,14 @@ newElement nn = call $ NewElement nn
 appendChild : Element a -> Element b -> { [DOM] } Eff m ()
 appendChild a b = call $ AppendChild a b
 
-setText : String -> Element et -> { [DOM] } Eff m ()
-setText s e = call $ SetProperty "text" e s
+setText : Element et -> String -> { [DOM] } Eff m ()
+setText e s = call $ SetText e s
+
+getText : Element et -> { [DOM] } Eff m String
+getText e = call $ GetText e
 
 getValue : Element et -> { [DOM] } Eff m String
 getValue el = call $ GetProperty "value" el
 
-setValue : String -> Element et -> { [DOM] } Eff m ()
-setValue v el = call $ SetProperty "value" el v
+setValue : Element et -> String -> { [DOM] } Eff m ()
+setValue el v = call $ SetProperty "value" el v
