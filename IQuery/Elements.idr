@@ -5,16 +5,16 @@ import Effect.StdIO
 
 %access public
 
-data ETy : Type where
-  BaseElement : ETy
-  Div : ETy
-  Input : ETy
-  Text : ETy
-  Date : ETy
-  Button : ETy
+data ElementType : Type where
+  Unspecified : ElementType
+  Div         : ElementType
+  Input       : ElementType
+  Text        : ElementType
+  Date        : ElementType
+  Button      : ElementType
   
 abstract
-data Element : ETy -> Type where
+data Element : ElementType -> Type where
   MkElem : Ptr -> Element et
 
 abstract
@@ -23,7 +23,7 @@ data NodeList : Type where
 
 -- should be somehow 'package private'
 namespace Priv
-  makeElem : (et : ETy) -> Ptr -> Element et
+  makeElem : (et : ElementType) -> Ptr -> Element et
   makeElem _ = MkElem
   
   setProperty : String -> Element et -> String -> IO ()
@@ -101,7 +101,7 @@ length : NodeList -> IO Int
 length (MkNodeList l) =
   mkForeign (FFun "%0.length" [FPtr] FInt) l
 
-elemAt : (et : ETy) -> NodeList -> Int -> IO (Maybe (Element et))
+elemAt : (et : ElementType) -> NodeList -> Int -> IO (Maybe (Element et))
 elemAt et (MkNodeList l) i =
   if !(length $ MkNodeList l) > i then
     map (Just . makeElem et) $ mkForeign (FFun "%0.item(%1)" [FPtr, FInt] FPtr) l i
@@ -125,10 +125,10 @@ onEvent {e} ev (MkElem el) cb =
                                          ] FUnit
     ) el ev cb
 
-interpNN : (nodename : String) -> ETy
+interpNN : (nodename : String) -> ElementType
 interpNN "div" = Div
 interpNN "input" = Input
-interpNN _ = BaseElement
+interpNN _ = Unspecified
 
 data EffDom : Effect where
   GetProperty  : String -> Element et -> { () } EffDom String
@@ -142,7 +142,7 @@ createElement : (nn : String) -> IO (Element (interpNN nn))
 createElement nn =
   map (Priv.makeElem $ interpNN nn) $ mkForeign (FFun "document.createElement(%0)" [FString] FPtr) nn
 
--- newElementNS : (et : ETy) -> String -> (Element et)
+-- newElementNS : (et : ElementType) -> String -> (Element et)
 -- newElementNS ns t =
 --   map mkElem $ mkForeign 
 --     (FFun "document.createElementNS(%0, %1)" [FString, FString] FPtr) ns t

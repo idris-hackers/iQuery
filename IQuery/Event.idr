@@ -61,7 +61,7 @@ instance Show EventType where
   show Submit = "submit"
 
 abstract
-data Event : EventType -> ETy -> Type where
+data Event : EventType -> ElementType -> Type where
   MkEvent : Ptr -> Event t et
 
 namespace Priv
@@ -93,7 +93,7 @@ key e = map fromKeyCode $ evProp {fty = FInt} "keyCode" e
 -- shiftKey = boolProp "shiftKey"
 
 data EffEvent : Effect where
-  Target        : (et : ETy) -> { Event t et } EffEvent (Element et)
+  Target        : (et : ElementType) -> { Event t et } EffEvent (Element et)
   EventProperty : (ft : FTy) -> String -> { Event t et } EffEvent (interpFTy ft)
   
 using (m : Type -> Type)
@@ -105,8 +105,8 @@ using (m : Type -> Type)
       x <- evProp {fty = ft} prop e
       k x e
       
-EVENT : EventType -> ETy -> EFFECT
+EVENT : EventType -> ElementType -> EFFECT
 EVENT t et = MkEff (Event t et) EffEvent
 
-target : {et : ETy} -> { [EVENT t et] } Eff m (Element et)
+target : {et : ElementType} -> { [EVENT t et] } Eff m (Element et)
 target {et} = call $ Target et
