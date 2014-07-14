@@ -1,17 +1,16 @@
 module Event
 
+import Data.List
+
 import Effects
 import Effect.StdIO
+
 import IQuery.Key
 import IQuery.Elements
 import IQuery.Input
 
 %access public
-
-abstract
-data Event : ETy -> Type where
-  MkEvent : Ptr -> Event et
-  
+ 
 public
 data EventType : Type where
   Click : EventType
@@ -37,6 +36,9 @@ data EventType : Type where
   Select : EventType
   Submit : EventType
 
+MouseEvents : List EventType
+MouseEvents = [Click, DoubleClick, MouseDown, MouseMove, MouseOver, MouseOut, MouseUp]
+
 instance Show EventType where
   show Click = "click"
   show DoubleClick = "dblclick"
@@ -61,29 +63,25 @@ instance Show EventType where
   show Select = "select"
   show Submit = "submit"
 
-evProp : {fty : FTy} -> String -> Event et -> IO (interpFTy fty)
-evProp {fty} propName (MkEvent e) = mkForeign (
+abstract
+data Event : EventType -> ETy -> Type where
+  MkEvent : Ptr -> Event t et
+
+namespace Priv
+    evProp : {fty : FTy} -> String -> Event t et -> IO (interpFTy fty)
+    evProp {fty} propName (MkEvent e) = mkForeign (
                                       FFun "%0[%1]" [ FPtr, FString ] fty
                                     ) e propName
 
 private
-boolProp : String -> Event et -> IO Bool
+boolProp : String -> Event t et -> IO Bool
 boolProp propName e = map toBool $ evProp {fty = FInt} propName e
   where toBool : Int -> Bool
         toBool 1 = True
         toBool _ = False
 
-key : Event et -> IO (Maybe Key)
+key : Event t et -> IO (Maybe Key)
 key e = map fromKeyCode $ evProp {fty = FInt} "keyCode" e
-
-mouseButton : Event et -> IO (Maybe MouseButton)
-mouseButton e = map fromButtonCode $ evProp {fty = FInt} "button" e
-
--- clientX : IsMouseEvent e => e -> IO Int
--- clientX = evProp {fty = FInt} "clientX"
-
--- clientY : IsMouseEvent e => e -> IO Int
--- clientY = evProp {fty = FInt} "clientY"
 
 -- altKey : Event -> IO Bool
 -- altKey = boolProp "altKey"
@@ -98,34 +96,36 @@ mouseButton e = map fromButtonCode $ evProp {fty = FInt} "button" e
 -- shiftKey = boolProp "shiftKey"
 
 data EffEvent : Effect where
-  Target : (et : ETy) -> { Event et } EffEvent (Element et)
-
+  Target        : (et : ETy) -> { Event t et } EffEvent (Element et)
+  EventProperty : (ft : FTy) -> String -> { Event t et } EffEvent (interpFTy ft)
+  
 using (m : Type -> Type)
   instance Handler EffEvent IO where
     handle e (Target et) k = do 
       x <- map (Priv.makeElem et) $ evProp {fty = FPtr} "target" e
       k x e
-        
-EVENT : ETy -> EFFECT
-EVENT et = MkEff (Event et) EffEvent
+    handle e (EventProperty ft prop) k = do
+      x <- evProp {fty = ft} prop e
+      k x e
+      
+EVENT : EventType -> ETy -> EFFECT
+EVENT t et = MkEff (Event t et) EffEvent
 
-target : {et : ETy} -> { [EVENT et] } Eff m (Element et)
+target : {et : ETy} -> { [EVENT t et] } Eff m (Element et)
 target {et} = call $ Target et
- 
--- data MouseEvent : Effect where
---   ClientX : { Event et } MouseEvent Int
-     
--- MOUSEEVENT : EFFECT
--- MOUSEEVENT = MkEff Event MouseEvent
 
--- using (m : Type -> Type)
---   instance Handler MouseEvent IO where
---     handle e ClientX k = do
---       x <- evProp {fty = FInt} "clientX" e
---       k x e
+clientX : { default tactics { search 30 } correctEvent : Elem t MouseEvents }
+  -> { [EVENT t et] } Eff m Int
+clientX = call $ EventProperty FInt "clientX"
 
--- clientX : { [MOUSEEVENT] } Eff m Int
--- clientX = call $ ClientX
+-- mouseButton : Event et -> IO (Maybe MouseButton)
+-- mouseButton e = map fromButtonCode $ evProp {fty = FInt} "button" e
 
-onClick : Element et -> ({ [DOM, EVENT et] } Eff IO Int) -> IO ()
+-- clientX : IsMouseEvent e => e -> IO Int
+-- clientX = evProp {fty = FInt} "clientX"
+
+-- clientY : IsMouseEvent e => e -> IO Int
+-- clientY = evProp {fty = FInt} "clientY"
+
+onClick : Element et -> ({ [DOM, EVENT Click et] } Eff IO Int) -> IO ()
 onClick el cb = onEvent "click" el (\e => runInit [(), e] cb) 

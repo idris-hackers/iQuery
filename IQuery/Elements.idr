@@ -176,5 +176,5 @@ setText s e = call $ SetProperty "text" e s
 getValue : Element et -> { [DOM] } Eff m String
 getValue el = call $ GetProperty "value" el
 
-setValue : Element et -> String -> { [DOM] } Eff m ()
-setValue el v = call $ SetProperty "value" el v
+setValue : String -> Element et -> { [DOM] } Eff m ()
+setValue v el = call $ SetProperty "value" el v
