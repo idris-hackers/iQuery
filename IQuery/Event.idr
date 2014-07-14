@@ -2,9 +2,6 @@ module Event
 
 import Data.List
 
-import Effects
-import Effect.StdIO
-
 import IQuery.Key
 import IQuery.Elements
 import IQuery.Input
@@ -92,21 +89,6 @@ key e = map fromKeyCode $ evProp {fty = FInt} "keyCode" e
 -- shiftKey : Event -> IO Bool
 -- shiftKey = boolProp "shiftKey"
 
-data EffEvent : Effect where
-  Target        : (et : ElementType) -> { Event t et } EffEvent (Element et)
-  EventProperty : (ft : FTy) -> String -> { Event t et } EffEvent (interpFTy ft)
-  
-using (m : Type -> Type)
-  instance Handler EffEvent IO where
-    handle e (Target et) k = do 
-      x <- map (Priv.makeElem et) $ evProp {fty = FPtr} "target" e
-      k x e
-    handle e (EventProperty ft prop) k = do
-      x <- evProp {fty = ft} prop e
-      k x e
-      
-EVENT : EventType -> ElementType -> EFFECT
-EVENT t et = MkEff (Event t et) EffEvent
+target : Event t et -> IO (Element et)
+target e = map (Priv.makeElem et) $ evProp {fty = FPtr} "target" e
 
-target : {et : ElementType} -> { [EVENT t et] } Eff m (Element et)
-target {et} = call $ Target et

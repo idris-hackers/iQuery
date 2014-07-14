@@ -1,7 +1,6 @@
 module MouseEvent
 
 import Data.List
-import Effects
 
 import IQuery.Event
 
@@ -10,49 +9,52 @@ import IQuery.Event
 MouseEvents : List EventType
 MouseEvents = [Click, DoubleClick, MouseDown, MouseMove, MouseOver, MouseOut, MouseUp]
 
-clientX : { default tactics { search 30 } correctEvent : Elem t MouseEvents }
-       -> { [EVENT t et] } Eff m Int
-clientX = call $ EventProperty FInt "clientX"
+clientX : Event t et
+       -> { default tactics { search 30 } correctEvent : Elem t MouseEvents }
+       -> IO Int
+clientX e = Priv.evProp {fty=FInt} "clientX" e
 
-clientY : { default tactics { search 30 } correctEvent : Elem t MouseEvents }
-       -> { [EVENT t et] } Eff m Int
-clientY = call $ EventProperty FInt "clientY"
+clientY : Event t et 
+       -> { default tactics { search 30 } correctEvent : Elem t MouseEvents }
+       -> IO Int
+clientY e = Priv.evProp {fty=FInt} "clientX" e
 
-screenX : { default tactics { search 30 } correctEvent : Elem t MouseEvents }
-       -> { [EVENT t et] } Eff m Int
-screenX = call $ EventProperty FInt "screenX"
+screenX : Event t et
+       -> { default tactics { search 30 } correctEvent : Elem t MouseEvents }
+       -> IO Int
+screenX e = Priv.evProp {fty=FInt} "screenX" e
 
-screenY : { default tactics { search 30 } correctEvent : Elem t MouseEvents }
-       -> { [EVENT t et] } Eff m Int
-screenY = call $ EventProperty FInt "screenY"
+screenY : Event t et
+       -> { default tactics { search 30 } correctEvent : Elem t MouseEvents }
+       -> IO Int
+screenY e = Priv.evProp {fty=FInt} "screenY" e
 
-mouseButton : { default tactics { search 30 } correctEvent : Elem t MouseEvents }
-           -> { [EVENT t et] } Eff m (Maybe MouseButton)
-mouseButton = do
-  bc <- call $ EventProperty FInt "button"
-  pure $ fromButtonCode bc
+mouseButton : Event t et
+           -> { default tactics { search 30 } correctEvent : Elem t MouseEvents }
+           -> IO (Maybe MouseButton)
+mouseButton e = map fromButtonCode $ Priv.evProp {fty=FInt} "button" e
 
 private
-onMouseEvent : (t : EventType) -> Element et -> (({ [DOM, EVENT t et] } Eff IO Int)) -> IO ()
-onMouseEvent t el cb = onEvent (show t) el (\e => runInit [(), e] cb) 
+onMouseEvent : (t : EventType) -> Element et -> (Event t et -> IO Int) -> IO ()
+onMouseEvent t = Priv.onEvent (show t)
 
-onClick : Element et -> ({ [DOM, EVENT Click et] } Eff IO Int) -> IO ()
+onClick : Element et -> (Event Click et -> IO Int) -> IO ()
 onClick = onMouseEvent Click
 
-onDoubleClick : Element et -> ({ [DOM, EVENT DoubleClick et] } Eff IO Int) -> IO ()
+onDoubleClick : Element et -> (Event DoubleClick et -> IO Int) -> IO ()
 onDoubleClick = onMouseEvent DoubleClick
 
-onMouseDown : Element et -> ({ [DOM, EVENT MouseDown et] } Eff IO Int) -> IO ()
+onMouseDown : Element et -> (Event MouseDown et -> IO Int) -> IO ()
 onMouseDown = onMouseEvent MouseDown
 
-onMouseMove : Element et -> ({ [DOM, EVENT MouseMove et] } Eff IO Int) -> IO ()
+onMouseMove : Element et -> (Event MouseMove et -> IO Int) -> IO ()
 onMouseMove = onMouseEvent MouseMove
 
-onMouseOver : Element et -> ({ [DOM, EVENT MouseOver et] } Eff IO Int) -> IO ()
+onMouseOver : Element et -> (Event MouseOver et -> IO Int) -> IO ()
 onMouseOver = onMouseEvent MouseOver
 
-onMouseOut : Element et -> ({ [DOM, EVENT MouseOut et] } Eff IO Int) -> IO ()
+onMouseOut : Element et -> (Event MouseOut et -> IO Int) -> IO ()
 onMouseOut = onMouseEvent MouseOut
 
-onMouseUp : Element et -> ({ [DOM, EVENT MouseUp et] } Eff IO Int) -> IO ()
+onMouseUp : Element et -> (Event MouseUp et -> IO Int) -> IO ()
 onMouseUp  = onMouseEvent MouseUp

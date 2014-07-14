@@ -1,7 +1,5 @@
 package iquery
 
-opts = "-p effects"
-
 modules = IQuery
 	, IQuery.Ajax
 	, IQuery.Elements
