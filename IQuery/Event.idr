@@ -103,7 +103,7 @@ data EffEvent : Effect where
 using (m : Type -> Type)
   instance Handler EffEvent IO where
     handle e (Target et) k = do 
-      x <- map (mkElem et) $ evProp {fty = FPtr} "target" e
+      x <- map (Priv.makeElem et) $ evProp {fty = FPtr} "target" e
       k x e
         
 EVENT : ETy -> EFFECT
@@ -126,3 +126,6 @@ target {et} = call $ Target et
 
 -- clientX : { [MOUSEEVENT] } Eff m Int
 -- clientX = call $ ClientX
+
+onClick : Element et -> ({ [DOM, EVENT et] } Eff IO Int) -> IO ()
+onClick el cb = onEvent "click" el (\e => runInit [(), e] cb) 

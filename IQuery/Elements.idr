@@ -6,51 +6,50 @@ import Effect.StdIO
 %access public
 
 data ETy : Type where
-  Any : ETy
+  BaseElement : ETy
   Div : ETy
   Input : ETy
-
+  Text : ETy
+  Date : ETy
+  
 abstract
 data Element : ETy -> Type where
   MkElem : Ptr -> Element et
-
--- scope hack
-mkElem : (et : ETy) -> Ptr -> Element et
-mkElem et p = MkElem p
-
-private
-makeElem : (et : ETy) -> Ptr -> (Element et)
-makeElem et = MkElem
 
 abstract
 data NodeList : Type where
   MkNodeList : Ptr -> NodeList
 
-setProperty : Element et -> String -> String -> IO ()
-setProperty (MkElem e) name value =
-  mkForeign (
-    FFun "%0[%1]=%2" [ FPtr
-                     , FString
-                     , FString
-                     ] FUnit
-  ) e name value
+-- should be somehow 'package private'
+namespace Priv
+  makeElem : (et : ETy) -> Ptr -> Element et
+  makeElem _ = MkElem
+  
+  setProperty : String -> Element et -> String -> IO ()
+  setProperty name (MkElem e) value =
+    mkForeign (
+      FFun "%0[%1]=%2" [ FPtr
+                       , FString
+                       , FString
+                       ] FUnit
+    ) e name value
 
-getProperty : Element et -> String -> IO String
-getProperty (MkElem e) name = 
-  mkForeign (
-    FFun "%0[%1]" [ FPtr
-                  , FString
-                  ] FString
-  ) e name
+  getProperty : String -> Element et -> IO String
+  getProperty name (MkElem e) = 
+    mkForeign (
+      FFun "%0[%1]" [ FPtr
+                    , FString
+                    ] FString
+    ) e name
 
-setAttribute : Element et -> String -> String -> IO ()
-setAttribute (MkElem e) name value =
-  mkForeign (
-    FFun "%0.setAttribute(%1,%2)" [ FPtr
-                                  , FString
-                                  , FString
-                                  ] FUnit
-  ) e name value
+  setAttribute : String -> Element et -> String -> IO ()
+  setAttribute name (MkElem e) value =
+    mkForeign (
+      FFun "%0.setAttribute(%1,%2)" [ FPtr
+                                    , FString
+                                    , FString
+                                    ] FUnit
+    ) e name value
 
 -- setAttributeNS : Element -> String -> String -> String -> IO ()
 -- setAttributeNS (MkElem e) ns name value =
@@ -62,6 +61,14 @@ setAttribute (MkElem e) name value =
 --                                        ] FUnit
 --   ) e ns name value
 
+  appendChild : Element a -> Element b -> IO ()
+  appendChild (MkElem p) (MkElem c) =
+    mkForeign (
+      FFun "%0.appendChild(%1)" [ FPtr
+                                , FPtr
+                                ] FUnit
+    ) p c
+    
 -- getAttribute : Element -> String -> IO String
 -- getAttribute (MkElem e) name = 
 --   mkForeign (
@@ -69,14 +76,6 @@ setAttribute (MkElem e) name value =
 --                                , FString
 --                                ] FString
 --   ) e name
-
-appendChildIO : Element a -> Element b -> IO ()
-appendChildIO (MkElem p) (MkElem c) =
-  mkForeign (
-    FFun "%0.appendChild(%1)" [ FPtr
-                              , FPtr
-                              ] FUnit
-  ) p c
 
 -- removeChild : Element -> Element -> IO ()
 -- removeChild (MkElem p) (MkElem c) =
@@ -93,18 +92,18 @@ appendChildIO (MkElem p) (MkElem c) =
 -- getText (MkElem e) =
 --   mkForeign (FFun "%0.textContent" [FPtr] FString) e
 
-setTextIO : Element et -> String -> IO ()
-setTextIO (MkElem e) s =
-  mkForeign (FFun "%0.textContent=%1" [FPtr, FString] FUnit) e s
+  setText : Element et -> String -> IO ()
+  setText (MkElem e) s =
+    mkForeign (FFun "%0.textContent=%1" [FPtr, FString] FUnit) e s
 
 length : NodeList -> IO Int
 length (MkNodeList l) =
   mkForeign (FFun "%0.length" [FPtr] FInt) l
 
-elemAt : NodeList -> Int -> IO (Maybe (Element Any))
-elemAt (MkNodeList l) i =
+elemAt : (et : ETy) -> NodeList -> Int -> IO (Maybe (Element et))
+elemAt et (MkNodeList l) i =
   if !(length $ MkNodeList l) > i then
-    map (Just . MkElem) $ mkForeign (FFun "%0.item(%1)" [FPtr, FInt] FPtr) l i
+    map (Just . makeElem et) $ mkForeign (FFun "%0.item(%1)" [FPtr, FInt] FPtr) l i
   else
     return Nothing
 
@@ -124,3 +123,58 @@ onEvent {e} ev (MkElem el) cb =
                                          , FFunction (FAny e) (FAny (IO Int))
                                          ] FUnit
     ) el ev cb
+
+interpNN : (nodename : String) -> ETy
+interpNN "div" = Div
+interpNN "input" = Input
+interpNN _ = BaseElement
+
+data EffDom : Effect where
+  GetProperty  : String -> Element et -> { () } EffDom String
+  SetProperty  : String -> Element et -> String -> { () } EffDom ()
+  NewElement  : (nn : String) -> { () } EffDom (Element (interpNN nn))
+  AppendChild : (Element a) -> (Element b) -> { () } EffDom ()
+  SetText     : Element et -> String -> { () } EffDom ()
+  
+private
+createElement : (nn : String) -> IO (Element (interpNN nn))
+createElement nn =
+  map (Priv.makeElem $ interpNN nn) $ mkForeign (FFun "document.createElement(%0)" [FString] FPtr) nn
+
+-- newElementNS : (et : ETy) -> String -> (Element et)
+-- newElementNS ns t =
+--   map mkElem $ mkForeign 
+--     (FFun "document.createElementNS(%0, %1)" [FString, FString] FPtr) ns t
+
+instance Handler EffDom IO where
+  handle () (GetProperty prop el) k = do
+    k !(Priv.getProperty prop el) ()
+  handle () (SetProperty prop el nv) k = do
+    Priv.setProperty prop el nv
+    k () () 
+  handle () (NewElement nn) k = do
+    k !(createElement nn) ()
+  handle () (AppendChild a b) k = do
+    Priv.appendChild a b
+    k () ()
+  handle () (SetText e s) k = do
+    Priv.setText e s
+    k () ()
+    
+DOM : EFFECT
+DOM = MkEff () EffDom
+
+newElement : (nn : String) -> { [DOM] } Eff m (Element (interpNN nn))
+newElement nn = call $ NewElement nn
+
+appendChild : Element a -> Element b -> { [DOM] } Eff m ()
+appendChild a b = call $ AppendChild a b
+
+setText : String -> Element et -> { [DOM] } Eff m ()
+setText s e = call $ SetProperty "text" e s
+
+getValue : Element et -> { [DOM] } Eff m String
+getValue el = call $ GetProperty "value" el
+
+setValue : Element et -> String -> { [DOM] } Eff m ()
+setValue el v = call $ SetProperty "value" el v
