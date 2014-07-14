@@ -17,7 +17,7 @@ clientX e = Priv.evProp {fty=FInt} "clientX" e
 clientY : Event t et 
        -> { default tactics { search 30 } correctEvent : Elem t MouseEvents }
        -> IO Int
-clientY e = Priv.evProp {fty=FInt} "clientX" e
+clientY e = Priv.evProp {fty=FInt} "clientY" e
 
 screenX : Event t et
        -> { default tactics { search 30 } correctEvent : Elem t MouseEvents }
