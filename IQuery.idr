@@ -14,4 +14,3 @@ import IQuery.State
 alert : String -> IO ()
 alert msg =
   mkForeign (FFun "alert(%0)" [FString] FUnit) msg
-

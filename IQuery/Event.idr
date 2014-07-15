@@ -4,7 +4,6 @@ import Data.List
 
 import IQuery.Key
 import IQuery.Elements
-import IQuery.Input
 
 %access public
  

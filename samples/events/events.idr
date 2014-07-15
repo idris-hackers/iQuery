@@ -5,14 +5,10 @@ import IQuery
 first : (et : ElementType) -> NodeList -> IO (Maybe (Element et))
 first et = flip (elemAt et) 0
 
-bar : Element Text -> IO Int
-bar el = getProperty {et=Text} "disabled" el
-  
 click : Event Click Text -> IO Int
 click e = do
   el <- target e
-  -- setAutoFocus el $ not !(getAutoFocus el)
-  Elements.setProperty {et=Text} "autofocus" el $ (1 - !(getProperty {et=Text} "autofocus" el))
+  setProperty "autofocus" el $ not !(getProperty "autofocus" el)
   setValue el $ (show !(clientX e)) ++ ", " ++ (show !(clientY e))
   pure 1
 
@@ -44,7 +40,8 @@ me e = do
 dth : Event et Date -> IO Int
 dth e = do
   el <- target e
-  Date.setMin el "2012-12-12"
+  --Date.setMin el "2012-12-12"
+  setProperty "min" el "2012-12-12"
   pure 1
  
 onk : Event KeyDown et -> IO Int

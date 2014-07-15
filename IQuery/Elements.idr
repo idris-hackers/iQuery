@@ -4,7 +4,22 @@ import Data.List
 
 %access public
 
--- move to somewhere else?
+data ElementType : Type where
+  Unspecified : ElementType
+  Div         : ElementType
+  Input       : ElementType
+  Text        : ElementType
+  Date        : ElementType
+  Button      : ElementType
+
+record Property : Type where
+  MkProperty : (fty : FTy)
+            -> (ty : Type)
+            -> (get : (interpFTy fty) -> ty)
+            -> (put : ty -> (interpFTy fty))
+            -> Property
+
+-- move somewhere else?
 toBool : Int -> Bool
 toBool 1 = True
 toBool _ = False
@@ -13,37 +28,33 @@ fromBool : Bool -> Int
 fromBool True = 1
 fromBool False = 0
 
-data ElementType : Type where
-  Unspecified : ElementType
-  Div         : ElementType
-  Input       : ElementType
-  Text        : ElementType
-  Date        : ElementType
-  Button      : ElementType
-  
+private 
+simpleProperty : FTy -> Property
+simpleProperty fty = MkProperty fty (interpFTy fty) id id
+
+boolProperty : Property
+boolProperty = MkProperty FInt Bool toBool fromBool
+
 private   
-InputProperties : List (String, FTy)
-InputProperties = [("disabled", FInt)
-                  ,("default", FString)
-                  ,("autofocus", FInt)]
+InputProperties : List (String, Property)
+InputProperties = [("disabled", boolProperty)
+                  ,("default", simpleProperty FString)
+                  ,("autofocus", boolProperty)]
 
 total
-elementProperties : ElementType -> List (String, FTy)
-elementProperties Text = [("autocomplete", FString)]
+elementProperties : ElementType -> List (String, Property)
+elementProperties Text = [("autocomplete", simpleProperty FString)]
                       ++ InputProperties
-elementProperties Date = [("min", FString)
-                         ,("max", FString)]
+
+elementProperties Date = [("min", simpleProperty FString)
+                         ,("max", simpleProperty FString)]
                       ++ InputProperties 
+                      
 elementProperties _ = []
 
-total
-safeLookup : Eq a 
-          => (x : a)
-          -> (lst : List (a,b))
-          -> {default ItIsJust prf : (IsJust (List.lookup x lst))}
-          -> b
-safeLookup x lst {prf} with (lookup x lst)
-  safeLookup x lst {prf=ItIsJust} | Just y = y
+data ElemMap : a -> b -> List (a, b) -> Type where 
+  First : ElemMap x y ((x, y) :: xs) 
+  Later : ElemMap x y xs -> ElemMap x y (p :: xs)
 
 abstract
 data Element : ElementType -> Type where
@@ -58,29 +69,6 @@ namespace Priv
   makeElem : (et : ElementType) -> Ptr -> Element et
   makeElem _ = MkElem
   
-  setProperty : (fty : FTy) -> String -> Element et -> (interpFTy fty) -> IO ()
-  setProperty fty name (MkElem e) value =
-    mkForeign (
-      FFun "%0[%1]=%2" [ FPtr
-                       , FString
-                       , fty
-                       ] FUnit
-    ) e name value
-
-  getProperty : (fty : FTy) -> String -> Element et -> IO (interpFTy fty)
-  getProperty fty name (MkElem e) = 
-    mkForeign (
-      FFun "%0[%1]" [ FPtr
-                    , FString
-                    ] fty
-    ) e name
-  
-  getBoolProperty : String -> Element et -> IO Bool
-  getBoolProperty name e = map toBool $ getProperty FInt name e
-
-  setBoolProperty : String -> Element et -> Bool -> IO ()
-  setBoolProperty name e v = setProperty FInt name e (fromBool v)
-
   onEvent : String -> Element et -> (e -> IO Int) -> IO ()
   onEvent {e} ev (MkElem el) cb =
      mkForeign (
@@ -169,33 +157,30 @@ newElement nn =
 --   map mkElem $ mkForeign 
 --     (FFun "document.createElementNS(%0, %1)" [FString, FString] FPtr) ns t
  
-getProperty : (prop : String)
+getProperty : (name : String)
             -> Element et 
-            -> {auto p : isJust $ lookup prop (elementProperties et) = True}
-            -> {default (safeLookup prop (elementProperties et)) fty : FTy}
-            -> IO (interpFTy fty)
-getProperty prop (MkElem e) {fty} = 
-  mkForeign (
-    FFun "%0[%1]" [ FPtr
-                  , FString
-                  ] fty
-  ) e prop
-
-setProperty : (prop : String)
+            -> {auto p : ElemMap name prop (elementProperties et)}
+            -> IO (Property.ty prop)
+getProperty name (MkElem e) {prop} =
+  map m $ mkForeign (FFun "%0[%1]" [FPtr, FString] (Property.fty prop)) e name
+    where
+      m = Property.get prop 
+      -- fty = Property.fty prop -- when used above gives 'p does not have a function type'
+      
+setProperty : (name : String)
            -> Element et
-           -> {auto p : isJust $ lookup prop (elementProperties et) = True}
-           -> {default (safeLookup prop (elementProperties et)) fty : FTy}
-           -> (interpFTy fty)
+            -> {auto p : ElemMap name prop (elementProperties et)}
+           -> (Property.ty prop)
            -> IO ()
-           
-setProperty prop (MkElem e) {fty} value =
-  mkForeign (
-    FFun "%0[%1]=%2" [ FPtr
+setProperty name (MkElem e) {prop} value =
+  mkForeign (FFun "%0[%1]=%2" [ FPtr
                      , FString
-                     , fty
+                     , (Property.fty prop)
                      ] FUnit
-  ) e prop value
-
+  ) e name (m value)
+    where
+      m = Property.put prop
+      
 setText : Element et -> String -> IO ()
 setText (MkElem e) s =
   mkForeign (FFun "%0.textContent=%1" [FPtr, FString] FUnit) e s
@@ -204,8 +189,15 @@ getText : Element et -> IO String
 getText (MkElem e) =
   mkForeign (FFun "%0.textContent" [FPtr] FString) e
 
+-- getValue/setValue doesn't use get/setProperty because they apply for all anyway
+
 getValue : Element et -> IO String
-getValue = Priv.getProperty FString "value"
+getValue (MkElem el) = 
+  mkForeign (FFun "%0[%1]" [FPtr, FString] FString) el "value"
 
 setValue : Element et -> String -> IO ()
-setValue = Priv.setProperty FString "value"
+setValue (MkElem el) v = 
+  mkForeign (FFun "%0[%1]=%2" [FPtr, FString, FString] FUnit) el "value" v
+
+foo : Element Text -> IO Bool
+foo e = getProperty "disabled" e
