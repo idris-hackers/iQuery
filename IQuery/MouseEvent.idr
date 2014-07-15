@@ -9,29 +9,24 @@ import IQuery.Event
 MouseEvents : List EventType
 MouseEvents = [Click, DoubleClick, MouseDown, MouseMove, MouseOver, MouseOut, MouseUp]
 
-clientX : Event t et
-       -> { default tactics { search 30 } correctEvent : Elem t MouseEvents }
-       -> IO Int
+syntax validatedGetter [ts] [r] =
+     Event t et
+  -> { default tactics { search 30 } prf : Elem t ts }
+  -> IO r
+  
+clientX : validatedGetter MouseEvents Int
 clientX e = Priv.evProp {fty=FInt} "clientX" e
 
-clientY : Event t et 
-       -> { default tactics { search 30 } correctEvent : Elem t MouseEvents }
-       -> IO Int
+clientY : validatedGetter MouseEvents Int
 clientY e = Priv.evProp {fty=FInt} "clientY" e
 
-screenX : Event t et
-       -> { default tactics { search 30 } correctEvent : Elem t MouseEvents }
-       -> IO Int
+screenX : validatedGetter MouseEvents Int
 screenX e = Priv.evProp {fty=FInt} "screenX" e
 
-screenY : Event t et
-       -> { default tactics { search 30 } correctEvent : Elem t MouseEvents }
-       -> IO Int
+screenY : validatedGetter MouseEvents Int
 screenY e = Priv.evProp {fty=FInt} "screenY" e
 
-mouseButton : Event t et
-           -> { default tactics { search 30 } correctEvent : Elem t MouseEvents }
-           -> IO (Maybe MouseButton)
+mouseButton : validatedGetter MouseEvents (Maybe MouseButton)
 mouseButton e = map fromButtonCode $ Priv.evProp {fty=FInt} "button" e
 
 private
