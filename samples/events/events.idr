@@ -33,7 +33,13 @@ mm e = do
   setText n $ (show x)
   appendChild !(target e) n
   pure 1
-   
+  
+me : Event MouseEnter et -> IO Int
+me e = do
+  el <- target e
+  setValue el "mouse enter"
+  pure 1
+  
 -- handle only specified element type
 dth : Event et Date -> IO Int
 dth e = do
@@ -50,6 +56,7 @@ main = do
   Just dt <- first Date !(query "input#dt")
   onClick dt dth
   onMouseMove list mm
+  onMouseEnter dt me
   
 -- Local Variables:
 -- idris-packages: ("effects" "iquery")

@@ -7,7 +7,15 @@ import IQuery.Event
 %access public
 
 MouseEvents : List EventType
-MouseEvents = [Click, DoubleClick, MouseDown, MouseMove, MouseOver, MouseOut, MouseUp]
+MouseEvents = [ Click
+              , DoubleClick
+              , MouseDown
+              , MouseMove
+              , MouseEnter
+              , MouseLeave
+              , MouseOver
+              , MouseOut
+              , MouseUp]
 
 syntax validatedGetter [ts] [r] =
      Event t et
@@ -41,6 +49,12 @@ onDoubleClick = onMouseEvent DoubleClick
 
 onMouseDown : Element et -> (Event MouseDown et -> IO Int) -> IO ()
 onMouseDown = onMouseEvent MouseDown
+
+onMouseEnter : Element et -> (Event MouseEnter et -> IO Int) -> IO ()
+onMouseEnter = onMouseEvent MouseEnter
+
+onMouseLeave : Element et -> (Event MouseLeave et -> IO Int) -> IO ()
+onMouseLeave = onMouseEvent MouseLeave
 
 onMouseMove : Element et -> (Event MouseMove et -> IO Int) -> IO ()
 onMouseMove = onMouseEvent MouseMove

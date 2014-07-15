@@ -14,6 +14,8 @@ data EventType : Type where
   DoubleClick : EventType
   MouseDown : EventType
   MouseMove : EventType
+  MouseEnter : EventType
+  MouseLeave : EventType
   MouseOver : EventType
   MouseOut : EventType
   MouseUp : EventType
@@ -39,6 +41,8 @@ instance Show EventType where
   show MouseDown = "mousedown"
   show MouseMove = "mousemove"
   show MouseOver = "mouseover"
+  show MouseEnter = "mouseenter"
+  show MouseLeave = "mouseleave"
   show MouseOut = "mouseout"
   show MouseUp = "mouseup"
   show KeyDown = "keydown"
