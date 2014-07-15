@@ -4,62 +4,8 @@ import Data.List
 
 %access public
 
-data ElementType : Type where
-  Unspecified : ElementType
-  Anchor : ElementType
-  Area : ElementType
-  Audio : ElementType
-  Base : ElementType
-  Blockquote : ElementType
-  Button : ElementType
-  Canvas : ElementType
-  Col : ElementType
-  Colgroup : ElementType
-  Datalist : ElementType
-  Del : ElementType
-  Details : ElementType
-  Dialog : ElementType
-  Embed : ElementType
-  Fieldset : ElementType
-  Form : ElementType
-  Iframe : ElementType
-  Img : ElementType
-  Ins : ElementType
-  Input : ElementType
-  Keygen : ElementType
-  Label : ElementType
-  Legend : ElementType
-  Li : ElementType
-  Link : ElementType
-  Map : ElementType
-  Menu : ElementType
-  MenuItem : ElementType
-  Meta : ElementType
-  Meter : ElementType
-  Object : ElementType
-  Ol : ElementType
-  OptGroup : ElementType
-  Option : ElementType
-  Param : ElementType
-  Progress : ElementType
-  Quote : ElementType
-  Script : ElementType
-  Select : ElementType
-  Source : ElementType
-  Style : ElementType
-  Table : ElementType
-  Td : ElementType
-  Th : ElementType
-  Tr : ElementType
-  TextArea : ElementType
-  Time : ElementType
-  Title : ElementType
-  Track : ElementType
-  Video : ElementType
-
-interpNN : (nodename : String) -> ElementType
-interpNN "a" = Anchor
-interpNN _ = Unspecified
+ElementType : Type
+ElementType = String
 
 record Property : Type where
   MkProperty : (fty : FTy)
@@ -81,25 +27,31 @@ private
 simpleProperty : FTy -> Property
 simpleProperty fty = MkProperty fty (interpFTy fty) id id
 
+private
 boolProperty : Property
 boolProperty = MkProperty FInt Bool toBool fromBool
 
+private
+stringProperty : Property
+stringProperty = simpleProperty FString
+
+private
+ElementProperties : List (String, Property)
+ElementProperties = [("title", stringProperty)]
+
 private   
 InputProperties : List (String, Property)
-InputProperties = [("disabled", boolProperty)
+InputProperties = [("autocomplete", simpleProperty FString)
+                  ,("disabled", boolProperty)
                   ,("default", simpleProperty FString)
-                  ,("autofocus", boolProperty)]
+                  ,("autofocus", boolProperty)
+                  ,("min", simpleProperty FString)
+                  ,("max", simpleProperty FString)]
 
 total
 elementProperties : ElementType -> List (String, Property)
-elementProperties Text = [("autocomplete", simpleProperty FString)]
-                      ++ InputProperties
-
-elementProperties Date = [("min", simpleProperty FString)
-                         ,("max", simpleProperty FString)]
-                      ++ InputProperties 
-                      
-elementProperties _ = []
+elementProperties "input" = InputProperties ++ ElementProperties
+elementProperties _ = ElementProperties
 
 data ElemMap : a -> b -> List (a, b) -> Type where 
   First : ElemMap x y ((x, y) :: xs) 
@@ -192,13 +144,13 @@ childNodes : Element et -> IO NodeList
 childNodes (MkElem e) =
   map MkNodeList $ mkForeign (FFun "%0.childNodes" [FPtr] FPtr) e
 
-newElement : (nn : String) -> IO (Element (interpNN nn))
+newElement : (nn : String) -> IO (Element nn)
 newElement nn =
-  map (Priv.makeElem $ interpNN nn) $ mkForeign (FFun "document.createElement(%0)" [FString] FPtr) nn
+  map (Priv.makeElem nn) $ mkForeign (FFun "document.createElement(%0)" [FString] FPtr) nn
 
-newElementNS : String -> String -> IO (Element Unspecified)
+newElementNS : String -> (nn : String) -> IO (Element nn)
 newElementNS ns t =
-  map (Priv.makeElem Unspecified) $ mkForeign (FFun "document.createElementNS(%0, %1)" [FString, FString] FPtr) ns t
+  map (Priv.makeElem t) $ mkForeign (FFun "document.createElementNS(%0, %1)" [FString, FString] FPtr) ns t
  
 getProperty : (name : String)
             -> Element et 
@@ -212,7 +164,7 @@ getProperty name (MkElem e) {prop} =
       
 setProperty : (name : String)
            -> Element et
-            -> {auto p : ElemMap name prop (elementProperties et)}
+           -> {auto p : ElemMap name prop (elementProperties et)}
            -> (Property.ty prop)
            -> IO ()
 setProperty name (MkElem e) {prop} value =
@@ -223,7 +175,7 @@ setProperty name (MkElem e) {prop} value =
   ) e name (m value)
     where
       m = Property.put prop
-      
+     
 setText : Element et -> String -> IO ()
 setText (MkElem e) s =
   mkForeign (FFun "%0.textContent=%1" [FPtr, FString] FUnit) e s
@@ -241,13 +193,3 @@ getValue (MkElem el) =
 setValue : Element et -> String -> IO ()
 setValue (MkElem el) v = 
   mkForeign (FFun "%0[%1]=%2" [FPtr, FString, FString] FUnit) el "value" v
-
-setType : Element et
-       -> { auto from : Elem et [Text, Radio] }
-       -> (nt : ElementType)
-       -> { auto to : Elem et [Text, Radio] }
-       -> IO (Element nt)
-setType (MkElem el) nt =
-  map (Priv.makeElem nt) $ mkForeign (
-      FFun "%0[%1]=%2;%0" [FPtr, FString, FString] FPtr
-    ) el "type" (show nt) 

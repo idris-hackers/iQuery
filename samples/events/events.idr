@@ -5,7 +5,7 @@ import IQuery
 first : (et : ElementType) -> NodeList -> IO (Maybe (Element et))
 first et = flip (elemAt et) 0
 
-click : Event Click Text -> IO Int
+click : Event Click "input" -> IO Int
 click e = do
   el <- target e
   setProperty "autofocus" el $ not !(getProperty "autofocus" el)
@@ -13,15 +13,21 @@ click e = do
   pure 1
 
 -- generic handler 
-gen : Element Unspecified -> Event t et -> IO Int
+gen : Element "element" -> Event t et -> IO Int
 gen ul e = do
   -- x <- clientX e -- compile time error
   n <- newElement "li"
   setText n "generic"
+  el <- target e
+  -- TODO: figure out common properties
+  -- with unknown Element type
+  
+  -- setProperty "title" el "whoosh"
+  -- setProperty "title" ul "woof"
   appendChild ul n
   pure 1
 
-mm : Event MouseMove Unspecified -> IO Int
+mm : Event MouseMove et -> IO Int
 mm e = do
   el <- target e
   x <- clientX e 
@@ -37,18 +43,17 @@ me e = do
   pure 1
   
 -- handle only specified element type
-dth : Event et Date -> IO Int
+dth : Event et "input" -> IO Int
 dth e = do
   el <- target e
-  --Date.setMin el "2012-12-12"
   setProperty "min" el "2012-12-12"
   pure 1
  
 onk : Event KeyDown et -> IO Int
 onk e = do
-  Just elShift <- first Unspecified !(query "span#shift")
-  Just elCtrl <- first Unspecified !(query "span#ctrl")
-  Just elAlt <- first Unspecified !(query "span#alt")
+  Just elShift <- first "span" !(query "span#shift")
+  Just elCtrl <- first "span" !(query "span#ctrl")
+  Just elAlt <- first "span" !(query "span#alt")
   
   setText elShift $ show !(shiftKey e)
   setText elCtrl $ show !(ctrlKey e)
@@ -58,15 +63,16 @@ onk e = do
   
 main : IO ()
 main = do
-  Just clickMe <- first Text !(query "#click-me")
-  Just list <- first Unspecified !(query "ul#list")
+  Just clickMe <- first "input" !(query "#click-me")
+  Just list <- first "element" !(query "ul#list")
   onClick clickMe click
   onDoubleClick clickMe (gen list)
-  Just dt <- first Date !(query "input#dt")
+  onDoubleClick list (gen list)
+  Just dt <- first "input" !(query "input#dt")
   onClick dt dth
   onMouseMove list mm
   onMouseEnter dt me
-  Just keys <- first Unspecified !(query "input#keys")
+  Just keys <- first "element" !(query "input#keys")
   onKeyDown keys onk
   
 -- Local Variables:
