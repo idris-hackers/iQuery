@@ -46,6 +46,18 @@ dth e = do
   el <- target e
   Date.setMin el "2012-12-12"
   pure 1
+ 
+onk : Event KeyDown et -> IO Int
+onk e = do
+  Just elShift <- first Unspecified !(query "span#shift")
+  Just elCtrl <- first Unspecified !(query "span#ctrl")
+  Just elAlt <- first Unspecified !(query "span#alt")
+  
+  setText elShift $ show !(shiftKey e)
+  setText elCtrl $ show !(ctrlKey e)
+  setText elAlt $ show !(altKey e)
+  
+  pure 1
   
 main : IO ()
 main = do
@@ -57,6 +69,8 @@ main = do
   onClick dt dth
   onMouseMove list mm
   onMouseEnter dt me
+  Just keys <- first Unspecified !(query "input#keys")
+  onKeyDown keys onk
   
 -- Local Variables:
 -- idris-packages: ("effects" "iquery")

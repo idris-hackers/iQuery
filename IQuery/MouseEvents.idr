@@ -37,33 +37,29 @@ screenY e = Priv.evProp {fty=FInt} "screenY" e
 mouseButton : validatedGetter MouseEvents (Maybe MouseButton)
 mouseButton e = map fromButtonCode $ Priv.evProp {fty=FInt} "button" e
 
-private
-onMouseEvent : (t : EventType) -> Element et -> (Event t et -> IO Int) -> IO ()
-onMouseEvent t = Priv.onEvent (show t)
-
 onClick : Element et -> (Event Click et -> IO Int) -> IO ()
-onClick = onMouseEvent Click
+onClick = Priv.onEvent Click
 
 onDoubleClick : Element et -> (Event DoubleClick et -> IO Int) -> IO ()
-onDoubleClick = onMouseEvent DoubleClick
+onDoubleClick = Priv.onEvent DoubleClick
 
 onMouseDown : Element et -> (Event MouseDown et -> IO Int) -> IO ()
-onMouseDown = onMouseEvent MouseDown
+onMouseDown = Priv.onEvent MouseDown
 
 onMouseEnter : Element et -> (Event MouseEnter et -> IO Int) -> IO ()
-onMouseEnter = onMouseEvent MouseEnter
+onMouseEnter = Priv.onEvent MouseEnter
 
 onMouseLeave : Element et -> (Event MouseLeave et -> IO Int) -> IO ()
-onMouseLeave = onMouseEvent MouseLeave
+onMouseLeave = Priv.onEvent MouseLeave
 
 onMouseMove : Element et -> (Event MouseMove et -> IO Int) -> IO ()
-onMouseMove = onMouseEvent MouseMove
+onMouseMove = Priv.onEvent MouseMove
 
 onMouseOver : Element et -> (Event MouseOver et -> IO Int) -> IO ()
-onMouseOver = onMouseEvent MouseOver
+onMouseOver = Priv.onEvent MouseOver
 
 onMouseOut : Element et -> (Event MouseOut et -> IO Int) -> IO ()
-onMouseOut = onMouseEvent MouseOut
+onMouseOut = Priv.onEvent MouseOut
 
 onMouseUp : Element et -> (Event MouseUp et -> IO Int) -> IO ()
-onMouseUp  = onMouseEvent MouseUp
+onMouseUp  = Priv.onEvent MouseUp

@@ -66,29 +66,16 @@ data Event : EventType -> ElementType -> Type where
   MkEvent : Ptr -> Event t et
 
 namespace Priv
+    onEvent : (t : EventType) -> Element et -> (Event t et -> IO Int) -> IO ()
+    onEvent t = Elements.Priv.onEvent (show t)
+
     evProp : {fty : FTy} -> String -> Event t et -> IO (interpFTy fty)
     evProp {fty} propName (MkEvent e) = mkForeign (
                                       FFun "%0[%1]" [ FPtr, FString ] fty
                                     ) e propName
 
-private
-boolProp : String -> Event t et -> IO Bool
-boolProp propName e = map toBool $ evProp {fty = FInt} propName e
-
-key : Event t et -> IO (Maybe Key)
-key e = map fromKeyCode $ evProp {fty = FInt} "keyCode" e
-
--- altKey : Event -> IO Bool
--- altKey = boolProp "altKey"
-
--- ctrlKey : Event -> IO Bool
--- ctrlKey = boolProp "ctrlKey"
-
--- metaKey : Event -> IO Bool
--- metaKey = boolProp "metaKey"
-
--- shiftKey : Event -> IO Bool
--- shiftKey = boolProp "shiftKey"
+    boolProp : String -> Event t et -> IO Bool
+    boolProp propName e = map toBool $ evProp {fty = FInt} propName e
 
 target : Event t et -> IO (Element et)
 target e = map (Priv.makeElem et) $ evProp {fty = FPtr} "target" e
