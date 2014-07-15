@@ -6,11 +6,60 @@ import Data.List
 
 data ElementType : Type where
   Unspecified : ElementType
-  Div         : ElementType
-  Input       : ElementType
-  Text        : ElementType
-  Date        : ElementType
-  Button      : ElementType
+  Anchor : ElementType
+  Area : ElementType
+  Audio : ElementType
+  Base : ElementType
+  Blockquote : ElementType
+  Button : ElementType
+  Canvas : ElementType
+  Col : ElementType
+  Colgroup : ElementType
+  Datalist : ElementType
+  Del : ElementType
+  Details : ElementType
+  Dialog : ElementType
+  Embed : ElementType
+  Fieldset : ElementType
+  Form : ElementType
+  Iframe : ElementType
+  Img : ElementType
+  Ins : ElementType
+  Input : ElementType
+  Keygen : ElementType
+  Label : ElementType
+  Legend : ElementType
+  Li : ElementType
+  Link : ElementType
+  Map : ElementType
+  Menu : ElementType
+  MenuItem : ElementType
+  Meta : ElementType
+  Meter : ElementType
+  Object : ElementType
+  Ol : ElementType
+  OptGroup : ElementType
+  Option : ElementType
+  Param : ElementType
+  Progress : ElementType
+  Quote : ElementType
+  Script : ElementType
+  Select : ElementType
+  Source : ElementType
+  Style : ElementType
+  Table : ElementType
+  Td : ElementType
+  Th : ElementType
+  Tr : ElementType
+  TextArea : ElementType
+  Time : ElementType
+  Title : ElementType
+  Track : ElementType
+  Video : ElementType
+
+interpNN : (nodename : String) -> ElementType
+interpNN "a" = Anchor
+interpNN _ = Unspecified
 
 record Property : Type where
   MkProperty : (fty : FTy)
@@ -143,11 +192,6 @@ childNodes : Element et -> IO NodeList
 childNodes (MkElem e) =
   map MkNodeList $ mkForeign (FFun "%0.childNodes" [FPtr] FPtr) e
 
-interpNN : (nodename : String) -> ElementType
-interpNN "div" = Div
-interpNN "input" = Input
-interpNN _ = Unspecified
-
 newElement : (nn : String) -> IO (Element (interpNN nn))
 newElement nn =
   map (Priv.makeElem $ interpNN nn) $ mkForeign (FFun "document.createElement(%0)" [FString] FPtr) nn
@@ -197,3 +241,13 @@ getValue (MkElem el) =
 setValue : Element et -> String -> IO ()
 setValue (MkElem el) v = 
   mkForeign (FFun "%0[%1]=%2" [FPtr, FString, FString] FUnit) el "value" v
+
+setType : Element et
+       -> { auto from : Elem et [Text, Radio] }
+       -> (nt : ElementType)
+       -> { auto to : Elem et [Text, Radio] }
+       -> IO (Element nt)
+setType (MkElem el) nt =
+  map (Priv.makeElem nt) $ mkForeign (
+      FFun "%0[%1]=%2;%0" [FPtr, FString, FString] FPtr
+    ) el "type" (show nt) 
