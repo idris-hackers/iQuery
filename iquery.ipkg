@@ -9,6 +9,5 @@ modules = IQuery
 	, IQuery.Document
 	, IQuery.Interval
 	, IQuery.Key
-	, IQuery.State
 	, IQuery.Timeout
 

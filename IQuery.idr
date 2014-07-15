@@ -7,7 +7,6 @@ import IQuery.Event
 import IQuery.MouseEvents
 import IQuery.KeyboardEvents
 import IQuery.Document
-import IQuery.State
 
 %access public
 
