@@ -7,56 +7,6 @@ import Data.List
 ElementType : Type
 ElementType = String
 
-record Property : Type where
-  MkProperty : (fty : FTy)
-            -> (ty : Type)
-            -> (get : (interpFTy fty) -> ty)
-            -> (put : ty -> (interpFTy fty))
-            -> Property
-
--- move somewhere else?
-toBool : Int -> Bool
-toBool 1 = True
-toBool _ = False
-
-fromBool : Bool -> Int
-fromBool True = 1
-fromBool False = 0
-
-private 
-simpleProperty : FTy -> Property
-simpleProperty fty = MkProperty fty (interpFTy fty) id id
-
-private
-boolProperty : Property
-boolProperty = MkProperty FInt Bool toBool fromBool
-
-private
-stringProperty : Property
-stringProperty = simpleProperty FString
-
-private
-ElementProperties : List (String, Property)
-ElementProperties = [("title", stringProperty)]
-
-private   
-InputProperties : List (String, Property)
-InputProperties = [("autocomplete", simpleProperty FString)
-                  ,("disabled", boolProperty)
-                  ,("default", simpleProperty FString)
-                  ,("autofocus", boolProperty)
-                  ,("min", simpleProperty FString)
-                  ,("max", simpleProperty FString)]
-
-total
-elementProperties : ElementType -> List (String, Property)
-elementProperties "input" = InputProperties ++ ElementProperties
-elementProperties _ = ElementProperties
-
-data ElemMap : a -> b -> List (a, b) -> Type where 
-  First : ElemMap x y ((x, y) :: xs) 
-  Later : ElemMap x y xs -> ElemMap x y (p :: xs)
-
 abstract
 data Element : ElementType -> Type where
   MkElem : Ptr -> Element et
@@ -78,6 +28,103 @@ namespace Priv
                                            , FFunction (FAny e) (FAny (IO Int))
                                            ] FUnit
       ) el ev cb
+
+  -- move somewhere else?
+  toBool : Int -> Bool
+  toBool 1 = True
+  toBool _ = False
+
+  fromBool : Bool -> Int
+  fromBool True = 1
+  fromBool False = 0
+
+namespace Properties
+
+  record Property : Type where
+    MkProperty : (fty : FTy)
+              -> (ty : Type)
+              -> (get : (interpFTy fty) -> ty)
+              -> (put : Maybe (ty -> (interpFTy fty)))
+              -> Property
+
+  private 
+  simpleProperty : FTy -> Property
+  simpleProperty fty = MkProperty fty (interpFTy fty) id (Just id)
+
+  private
+  bool : Property
+  bool = MkProperty FInt Bool toBool (Just fromBool)
+
+  private
+  int : Property
+  int = simpleProperty FInt
+  
+  private
+  boolReadOnly : Property
+  boolReadOnly = MkProperty FInt Bool toBool Nothing
+ 
+  private
+  double : Property
+  double = simpleProperty FFloat
+
+  private
+  doubleReadOnly : Property
+  doubleReadOnly = MkProperty FFloat Float id Nothing
+  
+  private
+  string : Property
+  string = simpleProperty FString
+
+  private
+  element : Property
+  element = MkProperty FPtr (Element "element") (Priv.makeElem "element") Nothing
+  
+  private
+  ElementProperties : List (String, Property)
+  ElementProperties = [("accessKey", string)
+                      ,("accessKeyLabel", string)
+                      ,("contentEditable", string)
+                      ,("isContentEditable", boolReadOnly)
+                    --,("dataset", DOMStringMap)
+                      ,("dir", string)
+                      ,("draggable", bool)
+                    --,("dropzone", DOMSettableTokenList)
+                      ,("hidden", bool)
+                      ,("itemScope", bool)
+                    --,("itemType", DOMSettableTokenList)
+                      ,("itemId", string)
+                    --,("itemProp", DOMSettableTokenList)
+                    --,("itemValue", any??)
+                      ,("lang", string)
+                      ,("offsetHeight", doubleReadOnly)
+                      ,("offsetLeft", doubleReadOnly)
+                      ,("offsetParent", element)
+                      ,("offsetTop", doubleReadOnly)
+                      ,("offsetWidth", doubleReadOnly)
+                    --,("properties", ...)
+                      ,("spellcheck", bool)
+                      ,("style", string)
+                      ,("tabIndex", int)
+                      ,("title", string)
+                      ,("translate", bool)]
+
+  private   
+  InputProperties : List (String, Property)
+  InputProperties = [("autocomplete", string)
+                    ,("disabled", bool)
+                    ,("default", string)
+                    ,("autofocus", bool)
+                    ,("min", string)
+                    ,("max", string)]
+
+  total
+  elementProperties : ElementType -> List (String, Property)
+  elementProperties "input" = InputProperties ++ ElementProperties
+  elementProperties _ = ElementProperties
+
+data ElemMap : a -> b -> List (a, b) -> Type where 
+  First : ElemMap x y ((x, y) :: xs) 
+  Later : ElemMap x y xs -> ElemMap x y (p :: xs)
 
 setAttribute : String -> Element et -> String -> IO ()
 setAttribute name (MkElem e) value =
@@ -165,17 +212,16 @@ getProperty name (MkElem e) {prop} =
 setProperty : (name : String)
            -> Element et
            -> {auto p : ElemMap name prop (elementProperties et)}
+           -> {auto settable : IsJust (Property.put prop) }
            -> (Property.ty prop)
            -> IO ()
-setProperty name (MkElem e) {prop} value =
-  mkForeign (FFun "%0[%1]=%2" [ FPtr
-                     , FString
-                     , (Property.fty prop)
-                     ] FUnit
-  ) e name (m value)
-    where
-      m = Property.put prop
-     
+setProperty name (MkElem e) {prop} value with (Property.put prop)
+  | Just m = 
+    mkForeign (FFun "%0[%1]=%2" [ FPtr
+                       , FString
+                       , (Property.fty prop)
+                       ] FUnit
+    ) e name (m value)
        
 setText : Element et -> String -> IO ()
 setText (MkElem e) s =
