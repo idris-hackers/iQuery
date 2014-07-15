@@ -70,9 +70,6 @@ namespace Priv
 private
 boolProp : String -> Event t et -> IO Bool
 boolProp propName e = map toBool $ evProp {fty = FInt} propName e
-  where toBool : Int -> Bool
-        toBool 1 = True
-        toBool _ = False
 
 key : Event t et -> IO (Maybe Key)
 key e = map fromKeyCode $ evProp {fty = FInt} "keyCode" e

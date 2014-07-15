@@ -1,6 +1,17 @@
 module Elements
 
+import Data.List
+
 %access public
+
+-- move to somewhere else?
+toBool : Int -> Bool
+toBool 1 = True
+toBool _ = False
+
+fromBool : Bool -> Int
+fromBool True = 1
+fromBool False = 0
 
 data ElementType : Type where
   Unspecified : ElementType
@@ -10,6 +21,30 @@ data ElementType : Type where
   Date        : ElementType
   Button      : ElementType
   
+private   
+InputProperties : List (String, FTy)
+InputProperties = [("disabled", FInt)
+                  ,("default", FString)
+                  ,("autofocus", FInt)]
+
+total
+elementProperties : ElementType -> List (String, FTy)
+elementProperties Text = [("autocomplete", FString)]
+                      ++ InputProperties
+elementProperties Date = [("min", FString)
+                         ,("max", FString)]
+                      ++ InputProperties 
+elementProperties _ = []
+
+total
+safeLookup : Eq a 
+          => (x : a)
+          -> (lst : List (a,b))
+          -> {default ItIsJust prf : (IsJust (List.lookup x lst))}
+          -> b
+safeLookup x lst {prf} with (lookup x lst)
+  safeLookup x lst {prf=ItIsJust} | Just y = y
+
 abstract
 data Element : ElementType -> Type where
   MkElem : Ptr -> Element et
@@ -23,22 +58,28 @@ namespace Priv
   makeElem : (et : ElementType) -> Ptr -> Element et
   makeElem _ = MkElem
   
-  setProperty : String -> Element et -> String -> IO ()
-  setProperty name (MkElem e) value =
+  setProperty : (fty : FTy) -> String -> Element et -> (interpFTy fty) -> IO ()
+  setProperty fty name (MkElem e) value =
     mkForeign (
       FFun "%0[%1]=%2" [ FPtr
                        , FString
-                       , FString
+                       , fty
                        ] FUnit
     ) e name value
 
-  getProperty : String -> Element et -> IO String
-  getProperty name (MkElem e) = 
+  getProperty : (fty : FTy) -> String -> Element et -> IO (interpFTy fty)
+  getProperty fty name (MkElem e) = 
     mkForeign (
       FFun "%0[%1]" [ FPtr
                     , FString
-                    ] FString
+                    ] fty
     ) e name
+  
+  getBoolProperty : String -> Element et -> IO Bool
+  getBoolProperty name e = map toBool $ getProperty FInt name e
+
+  setBoolProperty : String -> Element et -> Bool -> IO ()
+  setBoolProperty name e v = setProperty FInt name e (fromBool v)
 
   onEvent : String -> Element et -> (e -> IO Int) -> IO ()
   onEvent {e} ev (MkElem el) cb =
@@ -128,6 +169,33 @@ newElement nn =
 --   map mkElem $ mkForeign 
 --     (FFun "document.createElementNS(%0, %1)" [FString, FString] FPtr) ns t
  
+getProperty : (prop : String)
+            -> Element et 
+            -> {auto p : isJust $ lookup prop (elementProperties et) = True}
+            -> {default (safeLookup prop (elementProperties et)) fty : FTy}
+            -> IO (interpFTy fty)
+getProperty prop (MkElem e) {fty} = 
+  mkForeign (
+    FFun "%0[%1]" [ FPtr
+                  , FString
+                  ] fty
+  ) e prop
+
+setProperty : (prop : String)
+           -> Element et
+           -> {auto p : isJust $ lookup prop (elementProperties et) = True}
+           -> {default (safeLookup prop (elementProperties et)) fty : FTy}
+           -> (interpFTy fty)
+           -> IO ()
+           
+setProperty prop (MkElem e) {fty} value =
+  mkForeign (
+    FFun "%0[%1]=%2" [ FPtr
+                     , FString
+                     , fty
+                     ] FUnit
+  ) e prop value
+
 setText : Element et -> String -> IO ()
 setText (MkElem e) s =
   mkForeign (FFun "%0.textContent=%1" [FPtr, FString] FUnit) e s
@@ -137,7 +205,7 @@ getText (MkElem e) =
   mkForeign (FFun "%0.textContent" [FPtr] FString) e
 
 getValue : Element et -> IO String
-getValue = Priv.getProperty "value"
+getValue = Priv.getProperty FString "value"
 
 setValue : Element et -> String -> IO ()
-setValue = Priv.setProperty "value"
+setValue = Priv.setProperty FString "value"

@@ -5,13 +5,19 @@ import IQuery
 first : (et : ElementType) -> NodeList -> IO (Maybe (Element et))
 first et = flip (elemAt et) 0
 
-click : Event Click Unspecified -> IO Int
+bar : Element Text -> IO Int
+bar el = getProperty {et=Text} "disabled" el
+  
+click : Event Click Text -> IO Int
 click e = do
-  setValue !(target e) $ (show !(clientX e)) ++ ", " ++ (show !(clientY e))
+  el <- target e
+  -- setAutoFocus el $ not !(getAutoFocus el)
+  Elements.setProperty {et=Text} "autofocus" el $ (1 - !(getProperty {et=Text} "autofocus" el))
+  setValue el $ (show !(clientX e)) ++ ", " ++ (show !(clientY e))
   pure 1
 
 -- generic handler 
-gen : Element Unspecified -> Event et Unspecified -> IO Int
+gen : Element Unspecified -> Event t et -> IO Int
 gen ul e = do
   -- x <- clientX e -- compile time error
   n <- newElement "li"
@@ -31,13 +37,13 @@ mm e = do
 -- handle only specified element type
 dth : Event et Date -> IO Int
 dth e = do
-  Date.setMin !(target e) "2012-12-12"
+  el <- target e
+  Date.setMin el "2012-12-12"
   pure 1
   
 main : IO ()
 main = do
-  --Just res <- first Unspecified !(query "#result")
-  Just clickMe <- first Unspecified !(query "#click-me")
+  Just clickMe <- first Text !(query "#click-me")
   Just list <- first Unspecified !(query "ul#list")
   onClick clickMe click
   onDoubleClick clickMe (gen list)
