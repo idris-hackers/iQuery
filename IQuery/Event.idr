@@ -64,10 +64,7 @@ abstract
 data Event : EventType -> ElementType -> Type where
   MkEvent : Ptr -> Event t et
 
-namespace Priv
-    onEvent : (t : EventType) -> Element et -> (Event t et -> IO Int) -> IO ()
-    onEvent t = Elements.Priv.onEvent (show t)
-
+namespace Priv 
     evProp : {fty : FTy} -> String -> Event t et -> IO (interpFTy fty)
     evProp {fty} propName (MkEvent e) = mkForeign (
                                       FFun "%0[%1]" [ FPtr, FString ] fty
@@ -79,3 +76,10 @@ namespace Priv
 target : Event t et -> IO (Element et)
 target e = map (Priv.makeElem et) $ evProp {fty = FPtr} "target" e
 
+onEvent : (t : EventType) 
+       -> Element et 
+       -> (Event t et' -> IO Int) 
+       -> {auto p : (et' == "element" || et == et') = True}
+       -> IO ()
+onEvent {et} {et'} t el cb =
+  Elements.Priv.onEvent (show t) el cb

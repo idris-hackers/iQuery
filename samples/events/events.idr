@@ -13,21 +13,16 @@ click e = do
   pure 1
 
 -- generic handler 
-gen : Element "element" -> Event t et -> IO Int
+gen : Element "element" -> Event t "element" -> IO Int
 gen ul e = do
   -- x <- clientX e -- compile time error
   n <- newElement "li"
   setText n "generic"
-  el <- target e
-  -- TODO: figure out common properties
-  -- with unknown Element type
-  
-  -- setProperty "title" el "whoosh"
-  -- setProperty "title" ul "woof"
+  setProperty "title" ul "woosh"
   appendChild ul n
   pure 1
 
-mm : Event MouseMove et -> IO Int
+mm : Event MouseMove "element" -> IO Int
 mm e = do
   el <- target e
   x <- clientX e 
@@ -36,7 +31,7 @@ mm e = do
   appendChild !(target e) n
   pure 1
   
-me : Event MouseEnter et -> IO Int
+me : Event MouseEnter "element" -> IO Int
 me e = do
   el <- target e
   setValue el "mouse enter"
@@ -49,7 +44,7 @@ dth e = do
   setProperty "min" el "2012-12-12"
   pure 1
  
-onk : Event KeyDown et -> IO Int
+onk : Event KeyDown "element" -> IO Int
 onk e = do
   Just elShift <- first "span" !(query "span#shift")
   Just elCtrl <- first "span" !(query "span#ctrl")
@@ -60,20 +55,21 @@ onk e = do
   setText elAlt $ show !(altKey e)
   
   pure 1
-  
+
 main : IO ()
 main = do
   Just clickMe <- first "input" !(query "#click-me")
   Just list <- first "element" !(query "ul#list")
-  onClick clickMe click
-  onDoubleClick clickMe (gen list)
-  onDoubleClick list (gen list)
+  onEvent Click clickMe click
+  -- onEvent Click list dth -- compile time error
+  onEvent Click clickMe (gen list)
+  onEvent DoubleClick list (gen list)
   Just dt <- first "input" !(query "input#dt")
-  onClick dt dth
-  onMouseMove list mm
-  onMouseEnter dt me
+  onEvent Click dt dth
+  onEvent MouseMove list mm
+  onEvent MouseEnter dt me
   Just keys <- first "element" !(query "input#keys")
-  onKeyDown keys onk
+  onEvent KeyDown keys onk
   
 -- Local Variables:
 -- idris-packages: ("effects" "iquery")

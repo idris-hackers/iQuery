@@ -31,11 +31,3 @@ metaKey e = Priv.boolProp "metaKey" e
 shiftKey : validatedGetter KeyboardEvents Bool
 shiftKey e = Priv.boolProp "shiftKey" e
 
-onKeyDown : Element et -> (Event KeyDown et -> IO Int) -> IO ()
-onKeyDown = Priv.onEvent KeyDown
-
-onKeyPress : Element et -> (Event KeyPress et -> IO Int) -> IO ()
-onKeyPress = Priv.onEvent KeyPress
-
-onKeyUp : Element et -> (Event KeyUp et -> IO Int) -> IO ()
-onKeyUp = Priv.onEvent KeyUp

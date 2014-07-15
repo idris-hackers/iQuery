@@ -69,7 +69,7 @@ data NodeList : Type where
 namespace Priv
   makeElem : (et : ElementType) -> Ptr -> Element et
   makeElem _ = MkElem
-  
+ 
   onEvent : String -> Element et -> (e -> IO Int) -> IO ()
   onEvent {e} ev (MkElem el) cb =
      mkForeign (
@@ -176,6 +176,7 @@ setProperty name (MkElem e) {prop} value =
     where
       m = Property.put prop
      
+       
 setText : Element et -> String -> IO ()
 setText (MkElem e) s =
   mkForeign (FFun "%0.textContent=%1" [FPtr, FString] FUnit) e s
