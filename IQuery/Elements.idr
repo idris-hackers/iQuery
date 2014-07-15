@@ -98,7 +98,7 @@ namespace Properties
                       ,("lang", string)
                       ,("offsetHeight", doubleReadOnly)
                       ,("offsetLeft", doubleReadOnly)
-                      ,("offsetParent", element)
+                    --,("offsetParent", element)
                       ,("offsetTop", doubleReadOnly)
                       ,("offsetWidth", doubleReadOnly)
                     --,("properties", ...)
@@ -115,7 +115,8 @@ namespace Properties
                     ,("default", string)
                     ,("autofocus", bool)
                     ,("min", string)
-                    ,("max", string)]
+                    ,("max", string)
+                    ,("value", string)]
 
   total
   elementProperties : ElementType -> List (String, Property)
@@ -231,12 +232,10 @@ getText : Element et -> IO String
 getText (MkElem e) =
   mkForeign (FFun "%0.textContent" [FPtr] FString) e
 
--- getValue/setValue doesn't use get/setProperty because they apply for all anyway
+getValue : Element "input" -> IO String
+getValue el = 
+  getProperty "value" el
 
-getValue : Element et -> IO String
-getValue (MkElem el) = 
-  mkForeign (FFun "%0[%1]" [FPtr, FString] FString) el "value"
-
-setValue : Element et -> String -> IO ()
-setValue (MkElem el) v = 
-  mkForeign (FFun "%0[%1]=%2" [FPtr, FString, FString] FUnit) el "value" v
+setValue : Element "input" -> String -> IO ()
+setValue el v = 
+  setProperty "value" el v

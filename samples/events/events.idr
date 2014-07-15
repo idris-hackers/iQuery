@@ -31,12 +31,6 @@ mm e = do
   appendChild !(target e) n
   pure 1
   
-me : Event MouseEnter "element" -> IO Int
-me e = do
-  el <- target e
-  setValue el "mouse enter"
-  pure 1
-  
 -- handle only specified element type
 dth : Event et "input" -> IO Int
 dth e = do
@@ -67,7 +61,6 @@ main = do
   Just dt <- first "input" !(query "input#dt")
   onEvent Click dt dth
   onEvent MouseMove list mm
-  onEvent MouseEnter dt me
   Just keys <- first "element" !(query "input#keys")
   onEvent KeyDown keys onk
   
