@@ -1,4 +1,4 @@
-module MouseEvent
+module MouseEvents
 
 import Data.List
 
