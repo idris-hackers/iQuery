@@ -87,15 +87,15 @@ setAttribute name (MkElem e) value =
                                   ] FUnit
   ) e name value
 
--- setAttributeNS : Element -> String -> String -> String -> IO ()
--- setAttributeNS (MkElem e) ns name value =
---   mkForeign (
---     FFun "%0.setAttributeNS(%1,%2,%3)" [ FPtr
---                                        , FString
---                                        , FString
---                                        , FString
---                                        ] FUnit
---   ) e ns name value
+setAttributeNS : Element et -> String -> String -> String -> IO ()
+setAttributeNS (MkElem e) ns name value =
+  mkForeign (
+    FFun "%0.setAttributeNS(%1,%2,%3)" [ FPtr
+                                       , FString
+                                       , FString
+                                       , FString
+                                       ] FUnit
+  ) e ns name value
 
 appendChild : Element a -> Element b -> IO ()
 appendChild (MkElem p) (MkElem c) =
@@ -105,24 +105,24 @@ appendChild (MkElem p) (MkElem c) =
                               ] FUnit
   ) p c
     
--- getAttribute : Element -> String -> IO String
--- getAttribute (MkElem e) name = 
---   mkForeign (
---     FFun "%0.getAttribute(%1)" [ FPtr
---                                , FString
---                                ] FString
---   ) e name
+getAttribute : Element et -> String -> IO String
+getAttribute (MkElem e) name = 
+  mkForeign (
+    FFun "%0.getAttribute(%1)" [ FPtr
+                               , FString
+                               ] FString
+  ) e name
 
--- removeChild : Element -> Element -> IO ()
--- removeChild (MkElem p) (MkElem c) =
---   mkForeign (
---     FFun "%0.removeChild(%1)" [ FPtr
---                               , FPtr
---                               ] FUnit
---   ) p c
+removeChild : Element et -> Element et -> IO ()
+removeChild (MkElem p) (MkElem c) =
+  mkForeign (
+    FFun "%0.removeChild(%1)" [ FPtr
+                              , FPtr
+                              ] FUnit
+  ) p c
 
--- tagName : Element -> IO String
--- tagName (MkElem e) = mkForeign (FFun "%0.tagName" [FPtr] FString) e
+tagName : Element et -> IO String
+tagName (MkElem e) = mkForeign (FFun "%0.tagName" [FPtr] FString) e
 
 length : NodeList -> IO Int
 length (MkNodeList l) =
@@ -139,9 +139,9 @@ query : String -> IO NodeList
 query q =
   map MkNodeList $ mkForeign (FFun "document.querySelectorAll(%0)" [FString] FPtr) q
 
--- childNodes : Element -> IO NodeList
--- childNodes (MkElem e) =
---   map MkNodeList $ mkForeign (FFun "%0.childNodes" [FPtr] FPtr) e
+childNodes : Element et -> IO NodeList
+childNodes (MkElem e) =
+  map MkNodeList $ mkForeign (FFun "%0.childNodes" [FPtr] FPtr) e
 
 interpNN : (nodename : String) -> ElementType
 interpNN "div" = Div
@@ -152,10 +152,9 @@ newElement : (nn : String) -> IO (Element (interpNN nn))
 newElement nn =
   map (Priv.makeElem $ interpNN nn) $ mkForeign (FFun "document.createElement(%0)" [FString] FPtr) nn
 
--- newElementNS : (et : ElementType) -> String -> (Element et)
--- newElementNS ns t =
---   map mkElem $ mkForeign 
---     (FFun "document.createElementNS(%0, %1)" [FString, FString] FPtr) ns t
+newElementNS : String -> String -> IO (Element Unspecified)
+newElementNS ns t =
+  map (Priv.makeElem Unspecified) $ mkForeign (FFun "document.createElementNS(%0, %1)" [FString, FString] FPtr) ns t
  
 getProperty : (name : String)
             -> Element et 
@@ -198,6 +197,3 @@ getValue (MkElem el) =
 setValue : Element et -> String -> IO ()
 setValue (MkElem el) v = 
   mkForeign (FFun "%0[%1]=%2" [FPtr, FString, FString] FUnit) el "value" v
-
-foo : Element Text -> IO Bool
-foo e = getProperty "disabled" e
