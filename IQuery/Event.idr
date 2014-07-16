@@ -1,19 +1,20 @@
 module Event
 
+import Data.List
+
 import IQuery.Key
+import IQuery.Elements
 
 %access public
-
-abstract
-data Event : Type where
-  MkEvent : Ptr -> Event
-
+ 
 public
 data EventType : Type where
   Click : EventType
   DoubleClick : EventType
   MouseDown : EventType
   MouseMove : EventType
+  MouseEnter : EventType
+  MouseLeave : EventType
   MouseOver : EventType
   MouseOut : EventType
   MouseUp : EventType
@@ -39,6 +40,8 @@ instance Show EventType where
   show MouseDown = "mousedown"
   show MouseMove = "mousemove"
   show MouseOver = "mouseover"
+  show MouseEnter = "mouseenter"
+  show MouseLeave = "mouseleave"
   show MouseOut = "mouseout"
   show MouseUp = "mouseup"
   show KeyDown = "keydown"
@@ -57,39 +60,26 @@ instance Show EventType where
   show Select = "select"
   show Submit = "submit"
 
-private
-evProp : {fty : FTy} -> String -> Event -> IO (interpFTy fty)
-evProp {fty} propName (MkEvent e) = mkForeign (
+abstract
+data Event : EventType -> ElementType -> Type where
+  MkEvent : Ptr -> Event t et
+
+namespace Priv 
+    evProp : {fty : FTy} -> String -> Event t et -> IO (interpFTy fty)
+    evProp {fty} propName (MkEvent e) = mkForeign (
                                       FFun "%0[%1]" [ FPtr, FString ] fty
                                     ) e propName
 
-private
-boolProp : String -> Event -> IO Bool
-boolProp propName e = map toBool $ evProp {fty = FInt} propName e
-  where toBool : Int -> Bool
-        toBool 1 = True
-        toBool _ = False
+    boolProp : String -> Event t et -> IO Bool
+    boolProp propName e = map toBool $ evProp {fty = FInt} propName e
 
-key : Event -> IO (Maybe Key)
-key e = map fromKeyCode $ evProp {fty = FInt} "keyCode" e
+target : Event t et -> IO (Element et)
+target e = map (Priv.makeElem et) $ evProp {fty = FPtr} "target" e
 
-mouseButton : Event -> IO (Maybe MouseButton)
-mouseButton e = map fromButtonCode $ evProp {fty = FInt} "button" e
-
-clientX : Event -> IO Int
-clientX = evProp {fty = FInt} "clientX"
-
-clientY : Event -> IO Int
-clientY = evProp {fty = FInt} "clientY"
-
-altKey : Event -> IO Bool
-altKey = boolProp "altKey"
-
-ctrlKey : Event -> IO Bool
-ctrlKey = boolProp "ctrlKey"
-
-metaKey : Event -> IO Bool
-metaKey = boolProp "metaKey"
-
-shiftKey : Event -> IO Bool
-shiftKey = boolProp "shiftKey"
+onEvent : (t : EventType) 
+       -> Element et 
+       -> (Event t et' -> IO Int) 
+       -> {auto p : (et' == "element" || et == et') = True}
+       -> IO ()
+onEvent {et} {et'} t el cb =
+  Elements.Priv.onEvent (show t) el cb
