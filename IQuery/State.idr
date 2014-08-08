@@ -91,14 +91,14 @@ access n (MkState (STList t) p) = do
   pure $ Just $ MkState t r
 
 fromState' : State t -> IO (interpSTy t)
-fromState' (MkState STInt       p) = mkForeign (FFun "%0.val" [FPtr] FInt) p
-fromState' (MkState STString    p) = mkForeign (FFun "%0.val" [FPtr] FString) p
-fromState' (MkState (STMaybe a) p) = do
+fromState' {t = STInt     } (MkState STInt       p) = mkForeign (FFun "%0.val" [FPtr] FInt) p
+fromState' {t = STString  } (MkState STString    p) = mkForeign (FFun "%0.val" [FPtr] FString) p
+fromState' {t = STMaybe a } (MkState (STMaybe a) p) = do
   isNull <- (mkForeign (FFun "(%0.val == null).toString()" [FPtr] FString) p) 
   case isNull == "true" of
     True  => pure Nothing
     False => pure $ Just !(fromState' (MkState a p))
-fromState' (MkState (STList a) p) = do
+fromState' {t = STList a } (MkState (STList a) p) = do
   n <- mkForeign (FFun "%0.val.length" [FPtr] FInt) p
   ps <- sequence $ map 
      (\n => mkForeign (FFun "%0.val[%1]" [FPtr,FInt] FPtr) p n) [0..(n-1)]
@@ -113,14 +113,14 @@ fromState (MkState t p) = do
 
 public 
 toState : {t : StateTy} -> interpSTy t -> State t -> IO ()
-toState v (MkState STInt p) = 
+toState {t = STInt     } v (MkState STInt p) = 
   mkForeign (FFun "%0.val = %1" [FPtr, FInt] FUnit) p v
-toState v (MkState STString p) = do
+toState {t = STString  } v (MkState STString p) = do
   mkForeign (FFun "%0.val = %1" [FPtr, FString] FUnit) p v
-toState Nothing (MkState (STMaybe a) p) = 
+toState {t = STMaybe a } Nothing (MkState (STMaybe a) p) = 
   mkForeign (FFun "%0.val = null" [FPtr] FUnit) p
-toState (Just v) (MkState (STMaybe a) p) = toState v (MkState a p)
-toState xs (MkState (STList a) p) = do
+toState {t = STMaybe a } (Just v) (MkState (STMaybe a) p) = toState v (MkState a p)
+toState {t = STList a  } xs (MkState (STList a) p) = do
   array <- mkForeign (FFun "%0.val = []" [FPtr] FPtr) p
   sequence_ $ map (\x => do
     n <- mkForeign (FFun "%0.push( {} )" [FPtr] FInt) array 
