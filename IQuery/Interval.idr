@@ -2,7 +2,7 @@ module Interval
 
 %access public
 
-abstract
+export
 data Interval : Type where
   MkInterval : Ptr -> Interval
 
@@ -16,4 +16,3 @@ setInterval f t = do
 clearInterval : Interval -> IO ()
 clearInterval (MkInterval p) =
   mkForeign (FFun "clearInterval(%0)" [FPtr] FUnit) p
-

@@ -2,7 +2,7 @@ module IQuery.State
 
 %access private
 
-public 
+public export
 data StateTy : Type where
   STInt    : StateTy
   STString : StateTy
@@ -11,18 +11,18 @@ data StateTy : Type where
 --  STRecord : List (String,StateTy) -> StateTy
 --  STHash   : StateTy -> StateTy
 
-public
+public export
 interpSTy : StateTy -> Type
 interpSTy STInt       = Int
 interpSTy STString    = String
 interpSTy (STMaybe a) = Maybe (interpSTy a)
 interpSTy (STList  a) = List  (interpSTy a)
 
-abstract
+export
 data State : StateTy -> Type where
   MkState : (t : StateTy) -> Ptr -> State t
 
-abstract
+export
 data StateC : StateTy -> Type where
   MkStateC : Int -> (t : StateTy) -> Ptr -> StateC t
 
@@ -37,13 +37,13 @@ stateVarName = "__IDR__IQUERY__STATE__"
 
 stateVarExists : IO Bool
 stateVarExists = do
-  o <- mkForeign (FFun ("typeof " ++ stateVarName) [] FString) 
+  o <- mkForeign (FFun ("typeof " ++ stateVarName) [] FString)
   pure $ if o == "object" then True else False
 
 initStateVar : IO Ptr
 initStateVar = mkForeign (FFun (stateVarName ++ " = {count: 0}") [] FPtr)
 
-getStateVar : IO (Maybe Ptr) 
+getStateVar : IO (Maybe Ptr)
 getStateVar = case !stateVarExists of
   True  => map Just $ mkForeign (FFun stateVarName [] FPtr)
   False => pure Nothing
@@ -65,8 +65,8 @@ incCount c = do
   pure n
 
 infixl 5 =>>
-public
-(=>>) : IO (Maybe (State a)) -> (State a -> IO (Maybe b)) 
+public export
+(=>>) : IO (Maybe (State a)) -> (State a -> IO (Maybe b))
                              -> IO (Maybe b)
 s =>> f = do
   (Just s') <- s
@@ -74,7 +74,7 @@ s =>> f = do
   f s'
 
 infixl 5 :=>
-public
+public export
 (:=>) : IO (Maybe (State a)) -> (State a -> IO ()) -> IO Bool
 (:=>) s f = do
   (Just s') <- s
@@ -82,7 +82,7 @@ public
   f s'
   pure True
 
-public 
+public export
 access : Nat -> State (STList t) -> IO (Maybe (State t))
 access n (MkState (STList t) p) = do
   r <- mkForeign (FFun "%0.val[%1]" [FPtr,FInt] FPtr) p (fromNat n)
@@ -94,60 +94,58 @@ fromState' : State t -> IO (interpSTy t)
 fromState' (MkState STInt       p) = mkForeign (FFun "%0.val" [FPtr] FInt) p
 fromState' (MkState STString    p) = mkForeign (FFun "%0.val" [FPtr] FString) p
 fromState' (MkState (STMaybe a) p) = do
-  isNull <- (mkForeign (FFun "(%0.val == null).toString()" [FPtr] FString) p) 
+  isNull <- (mkForeign (FFun "(%0.val == null).toString()" [FPtr] FString) p)
   case isNull == "true" of
     True  => pure Nothing
     False => pure $ Just !(fromState' (MkState a p))
 fromState' (MkState (STList a) p) = do
   n <- mkForeign (FFun "%0.val.length" [FPtr] FInt) p
-  ps <- sequence $ map 
+  ps <- sequence $ map
      (\n => mkForeign (FFun "%0.val[%1]" [FPtr,FInt] FPtr) p n) [0..(n-1)]
   sequence $ map (\p' => fromState' (MkState a p')) ps
 
-public
+public export
 fromState : State t -> IO (Maybe (interpSTy t))
 fromState (MkState t p) = do
-  True <- isObj p 
+  True <- isObj p
     | False => pure Nothing
   map Just $ fromState' (MkState t p)
 
-public 
+public export
 toState : {t : StateTy} -> interpSTy t -> State t -> IO ()
-toState v (MkState STInt p) = 
+toState v (MkState STInt p) =
   mkForeign (FFun "%0.val = %1" [FPtr, FInt] FUnit) p v
 toState v (MkState STString p) = do
   mkForeign (FFun "%0.val = %1" [FPtr, FString] FUnit) p v
-toState Nothing (MkState (STMaybe a) p) = 
+toState Nothing (MkState (STMaybe a) p) =
   mkForeign (FFun "%0.val = null" [FPtr] FUnit) p
 toState (Just v) (MkState (STMaybe a) p) = toState v (MkState a p)
 toState xs (MkState (STList a) p) = do
   array <- mkForeign (FFun "%0.val = []" [FPtr] FPtr) p
   sequence_ $ map (\x => do
-    n <- mkForeign (FFun "%0.push( {} )" [FPtr] FInt) array 
+    n <- mkForeign (FFun "%0.push( {} )" [FPtr] FInt) array
     box <- mkForeign (FFun "%0[%1]" [FPtr, FInt] FPtr) array (n-1)
     toState x (MkState a box)
     ) xs
 
-public 
+public export
 get : StateC t -> IO (Maybe (State t))
 get (MkStateC _ t p) = do
   True <- isObj p
     | False => pure Nothing
   pure $ Just $ MkState t p
 
-public
+public export
 newState : (t : StateTy) -> interpSTy t -> IO (StateC t)
 newState t v = do
   c <- getStateVar'
   n <- incCount c
   p <- mkForeign (FFun "%0[%1] = {}" [FPtr,FInt] FPtr) c n
-  toState v (MkState t p) 
+  toState v (MkState t p)
   pure $ MkStateC n t p
 
-public
+public export
 destroyState : StateC t -> IO ()
 destroyState (MkStateC n _ _) = do
   c <- getStateVar'
   mkForeign (FFun "delete %0[%1]" [FPtr,FInt] FUnit) c n
-
-

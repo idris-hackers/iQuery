@@ -4,11 +4,11 @@ import IQuery.Key
 
 %access public
 
-abstract
+export
 data Event : Type where
   MkEvent : Ptr -> Event
 
-public
+public export
 data EventType : Type where
   Click : EventType
   DoubleClick : EventType

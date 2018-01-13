@@ -2,7 +2,7 @@ module Timeout
 
 %access public
 
-abstract
+export
 data Timeout : Type where
   MkTimeout : Ptr -> Timeout
 
@@ -16,4 +16,3 @@ setTimeout f t = do
 clearTimeout : Timeout -> IO ()
 clearTimeout (MkTimeout p) =
   mkForeign (FFun "clearTimeout(%0)" [FPtr] FUnit) p
-

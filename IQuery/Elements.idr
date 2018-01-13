@@ -2,13 +2,13 @@ module Elements
 
 import IQuery.Event
 
-%access public
+%access public export
 
-abstract
+export
 data Element : Type where
   MkElem : Ptr -> Element
 
-abstract
+export
 data NodeList : Type where
   MkNodeList : Ptr -> NodeList
 
@@ -18,7 +18,7 @@ newElement t =
 
 newElementNS : String -> String -> IO Element
 newElementNS ns t =
-  map MkElem $ mkForeign 
+  map MkElem $ mkForeign
     (FFun "document.createElementNS(%0, %1)" [FString, FString] FPtr) ns t
 
 setProperty : Element -> String -> String -> IO ()
@@ -31,7 +31,7 @@ setProperty (MkElem e) name value =
   ) e name value
 
 getProperty : Element -> String -> IO String
-getProperty (MkElem e) name = 
+getProperty (MkElem e) name =
   mkForeign (
     FFun "%0[%1]" [ FPtr
                   , FString
@@ -64,7 +64,7 @@ setAttributeNS (MkElem e) ns name value =
   ) e ns name value
 
 getAttribute : Element -> String -> IO String
-getAttribute (MkElem e) name = 
+getAttribute (MkElem e) name =
   mkForeign (
     FFun "%0.getAttribute(%1)" [ FPtr
                                , FString
@@ -129,5 +129,3 @@ query q =
 childNodes : Element -> IO NodeList
 childNodes (MkElem e) =
   map MkNodeList $ mkForeign (FFun "%0.childNodes" [FPtr] FPtr) e
-
-

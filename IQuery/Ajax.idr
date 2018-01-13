@@ -12,7 +12,7 @@ data ReadyState : Type where
   Loading : ReadyState
   Done : ReadyState
 
-public
+public export
 data Method : Type where
   GET : Method
   POST : Method
@@ -64,7 +64,7 @@ onReadyStateChange (MkXHR x) f =
 send : XMLHttpRequest -> String -> IO ()
 send (MkXHR xhr) r = mkForeign (FFun "%0.send(%1)" [FPtr, FString] FUnit) xhr r
 
-public
+public export
 ajax : Method -> String -> Bool -> List (String, String) -> String ->
        (Either Int String -> IO ()) -> IO ()
 ajax method url async headers dat callback = do
@@ -80,4 +80,3 @@ ajax method url async headers dat callback = do
                                                   _ => callback $ Left s
                                    _ => return ()
   send xhr dat
-
