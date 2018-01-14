@@ -1,4 +1,6 @@
-module IQuery.Key
+module Key
+
+%access public export
 
 data MouseButton : Type where
   MouseLeft : MouseButton

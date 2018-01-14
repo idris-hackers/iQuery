@@ -2,7 +2,7 @@ module Event
 
 import IQuery.Key
 
-%access public
+%access export
 
 export
 data Event : Type where
@@ -33,7 +33,7 @@ data EventType : Type where
   Select : EventType
   Submit : EventType
 
-instance Show EventType where
+Show EventType where
   show Click = "click"
   show DoubleClick = "dblclick"
   show MouseDown = "mousedown"
@@ -58,38 +58,41 @@ instance Show EventType where
   show Submit = "submit"
 
 private
-evProp : {fty : FTy} -> String -> Event -> IO (interpFTy fty)
-evProp {fty} propName (MkEvent e) = mkForeign (
-                                      FFun "%0[%1]" [ FPtr, FString ] fty
-                                    ) e propName
+evProp : {ty : Type} -> {auto fty : FTy FFI_JS [] (Ptr -> String -> JS_IO ty)} ->
+         String -> Event -> JS_IO ty
+evProp {ty} {fty} propName (MkEvent e) =
+  foreign FFI_JS "%0[%1]" (Ptr -> String -> JS_IO ty) e propName
 
 private
-boolProp : String -> Event -> IO Bool
-boolProp propName e = map toBool $ evProp {fty = FInt} propName e
+boolProp : String -> Event -> JS_IO Bool
+boolProp propName e = map toBool $ evProp {ty = Int} propName e
   where toBool : Int -> Bool
         toBool 1 = True
         toBool _ = False
 
-key : Event -> IO (Maybe Key)
-key e = map fromKeyCode $ evProp {fty = FInt} "keyCode" e
+key : Event -> JS_IO (Maybe Key)
+key e = map fromKeyCode $ evProp {ty = Int} "keyCode" e
 
-mouseButton : Event -> IO (Maybe MouseButton)
-mouseButton e = map fromButtonCode $ evProp {fty = FInt} "button" e
+mouseButton : Event -> JS_IO (Maybe MouseButton)
+mouseButton e = map fromButtonCode $ evProp {ty = Int} "button" e
 
-clientX : Event -> IO Int
-clientX = evProp {fty = FInt} "clientX"
+clientX : Event -> JS_IO Int
+clientX = evProp {ty = Int} "clientX"
 
-clientY : Event -> IO Int
-clientY = evProp {fty = FInt} "clientY"
+clientY : Event -> JS_IO Int
+clientY = evProp {ty = Int} "clientY"
 
-altKey : Event -> IO Bool
+altKey : Event -> JS_IO Bool
 altKey = boolProp "altKey"
 
-ctrlKey : Event -> IO Bool
+ctrlKey : Event -> JS_IO Bool
 ctrlKey = boolProp "ctrlKey"
 
-metaKey : Event -> IO Bool
+metaKey : Event -> JS_IO Bool
 metaKey = boolProp "metaKey"
 
-shiftKey : Event -> IO Bool
+shiftKey : Event -> JS_IO Bool
 shiftKey = boolProp "shiftKey"
+
+execCallback : (Event -> JS_IO Int) -> Ptr -> JS_IO Int
+execCallback cb = cb . MkEvent
