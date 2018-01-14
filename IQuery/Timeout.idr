@@ -1,4 +1,4 @@
-module Timeout
+module IQuery.Timeout
 
 %access export
 

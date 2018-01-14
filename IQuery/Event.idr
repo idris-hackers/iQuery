@@ -1,6 +1,6 @@
-module Event
+module IQuery.Event
 
-import IQuery.Key
+import public IQuery.Key
 
 %access export
 

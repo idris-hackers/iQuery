@@ -1,4 +1,4 @@
-module Key
+module IQuery.Key
 
 %access public export
 

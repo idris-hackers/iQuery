@@ -1,4 +1,4 @@
-module Elements
+module IQuery.Elements
 
 import IQuery.Event
 

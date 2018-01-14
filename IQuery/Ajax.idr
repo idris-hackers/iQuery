@@ -1,4 +1,4 @@
-module Ajax
+module IQuery.Ajax
 
 %access private
 

@@ -1,4 +1,4 @@
-module State
+module IQuery.State
 
 %access private
 

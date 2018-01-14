@@ -1,4 +1,4 @@
-module Interval
+module IQuery.Interval
 
 %access public export
 
