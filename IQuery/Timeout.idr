@@ -1,19 +1,17 @@
-module Timeout
+module IQuery.Timeout
 
-%access public
+%access export
 
-abstract
+export
 data Timeout : Type where
   MkTimeout : Ptr -> Timeout
 
-setTimeout : (() -> IO ()) -> Float -> IO Timeout
+setTimeout : (() -> JS_IO ()) -> Double -> JS_IO Timeout
 setTimeout f t = do
-  e <- mkForeign (
-    FFun "setTimeout(%0,%1)" [FFunction FUnit (FAny (IO ())), FFloat] FPtr
-  ) f t
-  return (MkTimeout e)
+  e <- foreign FFI_JS "setTimeout(%0,%1)"
+    (JsFn (() -> JS_IO ()) -> Double -> JS_IO Ptr) (MkJsFn f) t
+  pure (MkTimeout e)
 
-clearTimeout : Timeout -> IO ()
+clearTimeout : Timeout -> JS_IO ()
 clearTimeout (MkTimeout p) =
-  mkForeign (FFun "clearTimeout(%0)" [FPtr] FUnit) p
-
+  foreign FFI_JS "clearTimeout(%0)" (Ptr -> JS_IO ()) p

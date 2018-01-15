@@ -1,4 +1,6 @@
-module Key
+module IQuery.Key
+
+%access public export
 
 data MouseButton : Type where
   MouseLeft : MouseButton
@@ -283,4 +285,3 @@ fromKeyCode 88 = Just KeyX
 fromKeyCode 89 = Just KeyY
 fromKeyCode 90 = Just KeyZ
 fromKeyCode _ = Nothing
-
